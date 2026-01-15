@@ -1,5 +1,10 @@
 import axios from 'axios';
 import { buildApiUrl } from './apiConfig';
+import {
+    mapExpenseListToTransactions,
+    mapExpenseToTransaction,
+    mapTransactionToExpensePayload,
+} from '../transactions/transactionModel';
 
 // const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
 // const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
@@ -13,10 +18,11 @@ const API_URL = buildApiUrl('/expenses');
 
 class ExpenseService {
   // Function to add a new expense
-  static async addExpense(expenseData) {
+    static async addExpense(transactionData) {
     try {
-          const response = await axios.post(API_URL, expenseData);
-          return response.data;
+                    const payload = mapTransactionToExpensePayload(transactionData);
+                    const response = await axios.post(API_URL, payload);
+                    return mapExpenseToTransaction(response.data);
       } catch (error) {
           if (error.response) {
               // The request was made and the server responded with a status code
@@ -40,7 +46,7 @@ class ExpenseService {
                     const response = await axios.get(API_URL, {
                         params: { username }
                     });
-          return response.data;
+                    return mapExpenseListToTransactions(response.data);
       } catch (error) {
           console.error('Error fetching expenses:', error.message);
           throw error;
@@ -48,10 +54,19 @@ class ExpenseService {
   }
 
   // Function to update an expense by ID
-  static async updateExpense(id, expenseData) {
+    static async updateExpense(idOrTransaction, maybeTransactionData) {
     try {
-          const response = await axios.put(`${API_URL}/${id}`, expenseData);
-          return response.data;
+                    const id =
+                        typeof idOrTransaction === 'object'
+                            ? idOrTransaction?.id ?? idOrTransaction?.expense_id
+                            : idOrTransaction;
+
+                    const transactionData =
+                        typeof idOrTransaction === 'object' ? idOrTransaction : maybeTransactionData;
+
+                    const payload = mapTransactionToExpensePayload(transactionData);
+                    const response = await axios.put(`${API_URL}/${id}`, payload);
+                    return mapExpenseToTransaction(response.data);
       } catch (error) {
           if (error.response) {
               console.error('Error response:', error.response.data);

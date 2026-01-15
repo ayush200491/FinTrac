@@ -124,7 +124,7 @@ const ExpenseList = () => {
             
             <ListContainer>
                 {filteredExpenses?.map((expense) => (
-                    <ExpenseListItem key={expense.expense_id || expense.id} expense={expense} />
+                    <ExpenseListItem key={expense.id} expense={expense} />
                 ))}
             </ListContainer>
             

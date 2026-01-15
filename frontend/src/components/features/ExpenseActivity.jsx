@@ -222,15 +222,16 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
 
     try {
       const payload = {
+        title: description.trim() || category,
         username,
-        expenseType: selectedExpense.expenseType || 'daily',
+        type: selectedExpense.type || 'expense',
         amount: parsedAmount,
         category,
         description,
         date: date || new Date().toISOString().split('T')[0],
       };
 
-      await ExpenseService.updateExpense(selectedExpense.expense_id, payload);
+      await ExpenseService.updateExpense(selectedExpense.id, payload);
 
       const oldAmount = Number(selectedExpense.amount || 0);
       const delta = parsedAmount - oldAmount;
@@ -255,7 +256,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
     setLoading(true);
     setFormError('');
     try {
-      await ExpenseService.deleteExpense(selectedExpense.expense_id);
+      await ExpenseService.deleteExpense(selectedExpense.id);
 
       const oldAmount = Number(selectedExpense.amount || 0);
       if (username && oldAmount > 0) {
@@ -281,7 +282,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
         <TodayList>
           {expenses.map((expense) => (
             <StyledListItem
-              key={expense.expense_id}
+              key={expense.id}
               onMouseEnter={() => handleMouseEnter(expense)}
               onMouseLeave={handleMouseLeave}
               onClick={() => handleItemClick(expense)}
@@ -292,7 +293,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
                 <br />
                 <strong>Date:</strong> {formatExpenseDate(expense.date)}
               </ListItemContent>
-              {hoveredExpense && hoveredExpense.expense_id === expense.expense_id && (
+              {hoveredExpense && hoveredExpense.id === expense.id && (
                 <Tooltip className="tooltip">
                   <strong>Description:</strong> {expense.description || "No description"}
                 </Tooltip>

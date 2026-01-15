@@ -98,9 +98,10 @@ const ExpenseForm = ({ isOpen, onClose, onSubmit }) => {
 
     try {
       const payload = {
+        title: description.trim() || category,
         username: loggedInUser || user?.username,
-        expenseType: 'daily',
         amount: parsedAmount,
+        type: 'expense',
         category,
         description,
         date: expenseDate,
