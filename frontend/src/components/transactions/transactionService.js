@@ -1,0 +1,21 @@
+import ExpenseService from '../service/ExpenseService';
+import {
+  createTransaction,
+  mapExpenseListToTransactions,
+  mapExpenseToTransaction,
+} from './transactionModel';
+
+class TransactionService {
+  static async addTransaction(transactionInput) {
+    const transaction = createTransaction(transactionInput);
+    const savedExpense = await ExpenseService.addExpense(transaction);
+    return mapExpenseToTransaction(savedExpense);
+  }
+
+  static async getAllTransactions(username) {
+    const expenses = await ExpenseService.getAllExpenses(username);
+    return mapExpenseListToTransactions(expenses);
+  }
+}
+
+export default TransactionService;
