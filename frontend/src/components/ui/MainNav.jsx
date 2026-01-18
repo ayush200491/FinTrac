@@ -6,6 +6,7 @@ import { HiMiniUser } from "react-icons/hi2";
 import { useUser } from '../hooks/useUser';
 import { FaUserShield } from "react-icons/fa6";
 import { AiOutlineCalculator } from "react-icons/ai";
+import { AiOutlineHistory } from 'react-icons/ai';
 
 const NavList = styled.ul`
   display: flex;
@@ -80,6 +81,10 @@ function MainNav() {
         </li>
         <li><StyledNavLink to='/budgets'>
           <AiOutlineCalculator /> <span>Budgets</span>
+        </StyledNavLink>
+        </li>
+        <li><StyledNavLink to='/transactions'>
+          <AiOutlineHistory /> <span>Transactions</span>
         </StyledNavLink>
         </li>
         {(user?.role === 'ROLE_ADMIN' || user?.role === 'ADMIN') &&

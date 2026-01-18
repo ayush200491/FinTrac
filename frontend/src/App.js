@@ -17,6 +17,7 @@ import ExpenseForm from './components/expenses/ExpenseForm';
 import ExpenseItem from './components/expenses/ExpenseItem';
 import ExpenseList from './components/expenses/ExpenseList';
 import BudgetList from './components/budget/BudgetList';
+import Transactions from './components/pages/Transactions';
 
 const App = () => {
 
@@ -38,6 +39,7 @@ const App = () => {
               <Route path="/expenses/add" element={<ExpenseForm />} />
               <Route path="/expenses/:id" element={<ExpenseItem />} />
               <Route path="/expenses" element={<ExpenseList />} />
+              <Route path="/transactions" element={<Transactions />} />
               <Route path="/budgets" element={<BudgetList />} />
               {/* <Route path="*" element={<Navigate to="/" replace />} /> */}
               <Route path='/admin' element={<Users />} />
