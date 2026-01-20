@@ -1,9 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import TransactionService from '../transactions/transactionService';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
 import { formatCurrency } from '../utils/helpers';
+import {
+  ALL_MONTHS,
+  ALL_YEARS,
+  filterTransactionsByMonthYear,
+  getAvailableYears,
+} from '../transactions/transactionFilters';
 
 const Container = styled.div`
   padding: 2.4rem;
@@ -27,6 +33,29 @@ const Subtitle = styled.p`
   margin: 0 0 2rem;
   color: var(--color-grey-600);
   font-size: 1.4rem;
+`;
+
+const FilterBar = styled.div`
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.6rem;
+`;
+
+const FilterSelect = styled.select`
+  min-width: 18rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--border-radius-md);
+  background: var(--color-grey-0);
+  color: var(--color-grey-700);
+  font-size: 1.4rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-600);
+    box-shadow: 0 0 0 3px rgba(17, 127, 115, 0.12);
+  }
 `;
 
 const TableWrapper = styled.div`
@@ -88,9 +117,27 @@ const StateMessage = styled.div`
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState(ALL_MONTHS);
+  const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
   const { loggedInUser } = useAuth();
   const { user } = useUser();
   const username = loggedInUser || user?.username;
+
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, index) => ({
+        value: String(index + 1),
+        label: new Date(2024, index, 1).toLocaleDateString('en-IN', { month: 'long' }),
+      })),
+    [],
+  );
+
+  const yearOptions = useMemo(() => getAvailableYears(transactions), [transactions]);
+
+  const filteredTransactions = useMemo(
+    () => filterTransactionsByMonthYear(transactions, selectedMonth, selectedYear),
+    [transactions, selectedMonth, selectedYear],
+  );
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -120,10 +167,38 @@ function Transactions() {
       <Title>Transaction History</Title>
       <Subtitle>All recorded transactions in one place.</Subtitle>
 
+      <FilterBar>
+        <FilterSelect
+          aria-label="Filter transactions by month"
+          value={selectedMonth}
+          onChange={(event) => setSelectedMonth(event.target.value)}
+        >
+          <option value={ALL_MONTHS}>All Months</option>
+          {monthOptions.map((month) => (
+            <option key={month.value} value={month.value}>
+              {month.label}
+            </option>
+          ))}
+        </FilterSelect>
+
+        <FilterSelect
+          aria-label="Filter transactions by year"
+          value={selectedYear}
+          onChange={(event) => setSelectedYear(event.target.value)}
+        >
+          <option value={ALL_YEARS}>All Years</option>
+          {yearOptions.map((year) => (
+            <option key={year} value={String(year)}>
+              {year}
+            </option>
+          ))}
+        </FilterSelect>
+      </FilterBar>
+
       <TableWrapper>
         {loading ? (
           <StateMessage>Loading transactions...</StateMessage>
-        ) : transactions.length === 0 ? (
+        ) : filteredTransactions.length === 0 ? (
           <StateMessage>No transactions found.</StateMessage>
         ) : (
           <Table>
@@ -136,7 +211,7 @@ function Transactions() {
               </tr>
             </thead>
             <tbody>
-              {transactions.map((transaction) => (
+              {filteredTransactions.map((transaction) => (
                 <Row key={transaction.id}>
                   <Cell>{transaction.title}</Cell>
                   <Cell>{formatCurrency(transaction.amount)}</Cell>
