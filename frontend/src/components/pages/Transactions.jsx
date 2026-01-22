@@ -10,6 +10,7 @@ import {
   filterTransactionsByMonthYear,
   getAvailableYears,
 } from '../transactions/transactionFilters';
+import { groupTransactionsByMonthYear } from '../transactions/transactionGrouping';
 
 const Container = styled.div`
   padding: 2.4rem;
@@ -139,6 +140,11 @@ function Transactions() {
     [transactions, selectedMonth, selectedYear],
   );
 
+  const groupedTransactions = useMemo(
+    () => groupTransactionsByMonthYear(filteredTransactions),
+    [filteredTransactions],
+  );
+
   useEffect(() => {
     const loadTransactions = async () => {
       if (!username) {
@@ -201,28 +207,33 @@ function Transactions() {
         ) : filteredTransactions.length === 0 ? (
           <StateMessage>No transactions found.</StateMessage>
         ) : (
-          <Table>
-            <thead>
-              <tr>
-                <HeadCell>Title</HeadCell>
-                <HeadCell>Amount</HeadCell>
-                <HeadCell>Date</HeadCell>
-                <HeadCell>Type</HeadCell>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTransactions.map((transaction) => (
-                <Row key={transaction.id}>
-                  <Cell>{transaction.title}</Cell>
-                  <Cell>{formatCurrency(transaction.amount)}</Cell>
-                  <Cell>{new Date(transaction.date).toLocaleDateString('en-IN')}</Cell>
-                  <Cell>
-                    <TypeBadge type={transaction.type}>{transaction.type}</TypeBadge>
-                  </Cell>
-                </Row>
-              ))}
-            </tbody>
-          </Table>
+          groupedTransactions.map((group) => (
+            <div key={group.key}>
+              <h3>{group.label}</h3>
+              <Table>
+                <thead>
+                  <tr>
+                    <HeadCell>Title</HeadCell>
+                    <HeadCell>Amount</HeadCell>
+                    <HeadCell>Date</HeadCell>
+                    <HeadCell>Type</HeadCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.transactions.map((transaction) => (
+                    <Row key={transaction.id}>
+                      <Cell>{transaction.title}</Cell>
+                      <Cell>{formatCurrency(transaction.amount)}</Cell>
+                      <Cell>{new Date(transaction.date).toLocaleDateString('en-IN')}</Cell>
+                      <Cell>
+                        <TypeBadge type={transaction.type}>{transaction.type}</TypeBadge>
+                      </Cell>
+                    </Row>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          ))
         )}
       </TableWrapper>
     </Container>
