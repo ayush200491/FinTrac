@@ -63,8 +63,48 @@ const TableWrapper = styled.div`
   background: var(--color-grey-0);
   border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-md);
-  overflow: auto;
+  overflow: hidden;
   box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+`;
+
+const GroupSection = styled.section`
+  padding: 1.6rem;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--color-grey-200);
+  }
+
+  @media (max-width: 800px) {
+    padding: 1rem;
+  }
+`;
+
+const GroupHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.8rem 1rem;
+  border-radius: var(--border-radius-sm);
+  background: linear-gradient(135deg, rgba(17, 127, 115, 0.14), rgba(22, 104, 154, 0.08));
+`;
+
+const GroupTitle = styled.h3`
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--color-grey-800);
+`;
+
+const GroupMeta = styled.span`
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-grey-600);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 `;
 
 const Table = styled.table`
@@ -208,8 +248,13 @@ function Transactions() {
           <StateMessage>No transactions found.</StateMessage>
         ) : (
           groupedTransactions.map((group) => (
-            <div key={group.key}>
-              <h3>{group.label}</h3>
+            <GroupSection key={group.key}>
+              <GroupHeader>
+                <GroupTitle>{group.label}</GroupTitle>
+                <GroupMeta>
+                  {group.transactions.length} transaction{group.transactions.length === 1 ? '' : 's'}
+                </GroupMeta>
+              </GroupHeader>
               <Table>
                 <thead>
                   <tr>
@@ -232,7 +277,7 @@ function Transactions() {
                   ))}
                 </tbody>
               </Table>
-            </div>
+            </GroupSection>
           ))
         )}
       </TableWrapper>
