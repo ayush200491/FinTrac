@@ -16,6 +16,12 @@ class TransactionService {
     const expenses = await ExpenseService.getAllExpenses(username);
     return mapExpenseListToTransactions(expenses);
   }
+
+  static async updateTransaction(transactionInput) {
+    const transaction = createTransaction(transactionInput);
+    const updatedExpense = await ExpenseService.updateExpense(transaction.id, transaction);
+    return mapExpenseToTransaction(updatedExpense);
+  }
 }
 
 export default TransactionService;

@@ -4,6 +4,8 @@ import TransactionService from '../transactions/transactionService';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
 import { formatCurrency } from '../utils/helpers';
+import Modal from '../ui/Modal';
+import { Button, ErrorMessage, Input, Label } from '../ui';
 import {
   ALL_MONTHS,
   ALL_YEARS,
@@ -11,6 +13,7 @@ import {
   getAvailableYears,
 } from '../transactions/transactionFilters';
 import { groupTransactionsByMonthYear } from '../transactions/transactionGrouping';
+import { EXPENSE_CATEGORIES } from '../expenses/constants/expenseCategories';
 
 const Container = styled.div`
   padding: 2.4rem;
@@ -124,6 +127,12 @@ const HeadCell = styled.th`
 `;
 
 const Row = styled.tr`
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-grey-50);
+  }
+
   &:not(:last-child) {
     border-bottom: 1px solid var(--color-grey-100);
   }
@@ -155,11 +164,52 @@ const StateMessage = styled.div`
   font-size: 1.5rem;
 `;
 
+const EditForm = styled.form`
+  display: grid;
+  gap: 1rem;
+`;
+
+const EditTitle = styled.h3`
+  margin: 0 0 0.6rem;
+  color: var(--color-grey-800);
+  font-size: 2rem;
+`;
+
+const EditSelect = styled.select`
+  width: 100%;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--border-radius-md);
+  background: var(--color-grey-0);
+  color: var(--color-grey-700);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 4px rgba(17, 127, 115, 0.14);
+  }
+`;
+
+const EditActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.8rem;
+`;
+
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(ALL_MONTHS);
   const [selectedYear, setSelectedYear] = useState(ALL_YEARS);
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    title: '',
+    amount: '',
+    category: 'OTHER',
+    date: '',
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const { loggedInUser } = useAuth();
   const { user } = useUser();
   const username = loggedInUser || user?.username;
@@ -207,6 +257,68 @@ function Transactions() {
 
     loadTransactions();
   }, [username]);
+
+  const openEditModal = (transaction) => {
+    setEditingTransaction(transaction);
+    setEditFormData({
+      title: transaction.title || '',
+      amount: String(transaction.amount ?? ''),
+      category: transaction.category || 'OTHER',
+      date: transaction.date ? new Date(transaction.date).toISOString().split('T')[0] : '',
+    });
+    setSaveError('');
+  };
+
+  const closeEditModal = () => {
+    setEditingTransaction(null);
+    setSaveError('');
+  };
+
+  const handleEditChange = (field, value) => {
+    setEditFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveEdit = async (event) => {
+    event.preventDefault();
+    if (!editingTransaction) return;
+
+    const amountValue = Number(editFormData.amount);
+    if (!editFormData.title.trim()) {
+      setSaveError('Title is required');
+      return;
+    }
+    if (!Number.isFinite(amountValue) || amountValue <= 0) {
+      setSaveError('Amount must be greater than 0');
+      return;
+    }
+    if (!editFormData.date) {
+      setSaveError('Date is required');
+      return;
+    }
+
+    setSaveLoading(true);
+    setSaveError('');
+    try {
+      const updatedTransaction = await TransactionService.updateTransaction({
+        ...editingTransaction,
+        title: editFormData.title.trim(),
+        amount: amountValue,
+        category: editFormData.category,
+        date: editFormData.date,
+      });
+
+      setTransactions((prev) =>
+        prev.map((transaction) =>
+          transaction.id === updatedTransaction.id ? updatedTransaction : transaction,
+        ),
+      );
+      closeEditModal();
+    } catch (error) {
+      setSaveError(error?.message || 'Failed to update transaction');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   return (
     <Container>
@@ -266,7 +378,7 @@ function Transactions() {
                 </thead>
                 <tbody>
                   {group.transactions.map((transaction) => (
-                    <Row key={transaction.id}>
+                    <Row key={transaction.id} onClick={() => openEditModal(transaction)}>
                       <Cell>{transaction.title}</Cell>
                       <Cell>{formatCurrency(transaction.amount)}</Cell>
                       <Cell>{new Date(transaction.date).toLocaleDateString('en-IN')}</Cell>
@@ -281,6 +393,71 @@ function Transactions() {
           ))
         )}
       </TableWrapper>
+
+      <Modal isOpen={Boolean(editingTransaction)} onClose={closeEditModal}>
+        <EditTitle>Edit Transaction</EditTitle>
+        <EditForm onSubmit={handleSaveEdit}>
+          <div>
+            <Label htmlFor="transaction-title">Title</Label>
+            <Input
+              id="transaction-title"
+              value={editFormData.title}
+              onChange={(event) => handleEditChange('title', event.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="transaction-amount">Amount</Label>
+            <Input
+              id="transaction-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={editFormData.amount}
+              onChange={(event) => handleEditChange('amount', event.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="transaction-category">Category</Label>
+            <EditSelect
+              id="transaction-category"
+              value={editFormData.category}
+              onChange={(event) => handleEditChange('category', event.target.value)}
+            >
+              {EXPENSE_CATEGORIES.map((category) => (
+                <option key={category.name} value={category.name}>
+                  {category.icon} {category.displayName}
+                </option>
+              ))}
+            </EditSelect>
+          </div>
+
+          <div>
+            <Label htmlFor="transaction-date">Date</Label>
+            <Input
+              id="transaction-date"
+              type="date"
+              value={editFormData.date}
+              onChange={(event) => handleEditChange('date', event.target.value)}
+              required
+            />
+          </div>
+
+          {saveError && <ErrorMessage>{saveError}</ErrorMessage>}
+
+          <EditActions>
+            <Button type="button" variation="secondary" onClick={closeEditModal} disabled={saveLoading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saveLoading}>
+              {saveLoading ? 'Saving...' : 'Save'}
+            </Button>
+          </EditActions>
+        </EditForm>
+      </Modal>
     </Container>
   );
 }
