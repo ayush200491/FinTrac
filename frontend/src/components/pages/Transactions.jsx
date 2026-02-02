@@ -13,6 +13,7 @@ import {
   getAvailableYears,
 } from '../transactions/transactionFilters';
 import { groupTransactionsByMonthYear } from '../transactions/transactionGrouping';
+import { getSpendingComparison } from '../transactions/transactionComparison';
 import { EXPENSE_CATEGORIES } from '../expenses/constants/expenseCategories';
 
 const Container = styled.div`
@@ -44,6 +45,16 @@ const FilterBar = styled.div`
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1.6rem;
+`;
+
+const ComparisonCard = styled.div`
+  margin-bottom: 1.6rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--border-radius-md);
+  background: var(--color-grey-0);
+  color: var(--color-grey-700);
+  font-size: 1.4rem;
 `;
 
 const FilterSelect = styled.select`
@@ -235,6 +246,11 @@ function Transactions() {
     [filteredTransactions],
   );
 
+  const spendingComparison = useMemo(
+    () => getSpendingComparison(transactions, selectedMonth, selectedYear),
+    [transactions, selectedMonth, selectedYear],
+  );
+
   useEffect(() => {
     const loadTransactions = async () => {
       if (!username) {
@@ -352,6 +368,8 @@ function Transactions() {
           ))}
         </FilterSelect>
       </FilterBar>
+
+      <ComparisonCard>{spendingComparison.message}</ComparisonCard>
 
       <TableWrapper>
         {loading ? (
