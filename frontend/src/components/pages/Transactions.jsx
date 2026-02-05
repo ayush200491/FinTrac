@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
 import TransactionService from '../transactions/transactionService';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
@@ -54,6 +63,54 @@ const ComparisonCard = styled.div`
   border-radius: var(--border-radius-md);
   background: var(--color-grey-0);
   color: var(--color-grey-700);
+  font-size: 1.4rem;
+`;
+
+const ContentLayout = styled.div`
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+  gap: 1.6rem;
+  align-items: start;
+
+  @media (max-width: 1080px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const LeftColumn = styled.div`
+  min-width: 0;
+`;
+
+const RightColumn = styled.aside`
+  min-width: 0;
+`;
+
+const ChartCard = styled.div`
+  background: var(--color-grey-0);
+  border: 1px solid var(--color-grey-200);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 1.2rem;
+`;
+
+const ChartTitle = styled.h3`
+  margin: 0 0 1rem;
+  color: var(--color-grey-800);
+  font-size: 1.6rem;
+  font-weight: 700;
+`;
+
+const ChartHolder = styled.div`
+  width: 100%;
+  height: 320px;
+`;
+
+const ChartState = styled.div`
+  height: 320px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  color: var(--color-grey-600);
   font-size: 1.4rem;
 `;
 
@@ -207,6 +264,29 @@ const EditActions = styled.div`
   gap: 0.8rem;
 `;
 
+function SpendingTooltip({ active, payload, label }) {
+  if (!active || !payload || !payload.length) return null;
+
+  return (
+    <div
+      style={{
+        background: 'var(--color-grey-0)',
+        border: '1px solid var(--color-grey-200)',
+        borderRadius: 'var(--border-radius-sm)',
+        padding: '0.8rem 1rem',
+        boxShadow: 'var(--shadow-sm)',
+      }}
+    >
+      <div style={{ color: 'var(--color-grey-700)', fontSize: '1.2rem', marginBottom: '0.3rem' }}>
+        {label}
+      </div>
+      <div style={{ color: 'var(--color-grey-900)', fontWeight: 600 }}>
+        {formatCurrency(payload[0].value)}
+      </div>
+    </div>
+  );
+}
+
 function Transactions() {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -250,6 +330,34 @@ function Transactions() {
     () => getSpendingComparison(transactions, selectedMonth, selectedYear),
     [transactions, selectedMonth, selectedYear],
   );
+
+  const monthlyTrendData = useMemo(() => {
+    const totalsByMonth = filteredTransactions.reduce((accumulator, transaction) => {
+      if (transaction?.type === 'income') return accumulator;
+
+      const parsedDate = new Date(transaction?.date);
+      if (Number.isNaN(parsedDate.getTime())) return accumulator;
+
+      const year = parsedDate.getFullYear();
+      const month = parsedDate.getMonth();
+      const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+      const amount = Number(transaction?.amount || 0);
+      const safeAmount = Number.isFinite(amount) ? amount : 0;
+
+      if (!accumulator[key]) {
+        accumulator[key] = {
+          key,
+          label: parsedDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' }),
+          spending: 0,
+        };
+      }
+
+      accumulator[key].spending += safeAmount;
+      return accumulator;
+    }, {});
+
+    return Object.values(totalsByMonth).sort((a, b) => a.key.localeCompare(b.key));
+  }, [filteredTransactions]);
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -371,46 +479,84 @@ function Transactions() {
 
       <ComparisonCard>{spendingComparison.message}</ComparisonCard>
 
-      <TableWrapper>
-        {loading ? (
-          <StateMessage>Loading transactions...</StateMessage>
-        ) : filteredTransactions.length === 0 ? (
-          <StateMessage>No transactions found.</StateMessage>
-        ) : (
-          groupedTransactions.map((group) => (
-            <GroupSection key={group.key}>
-              <GroupHeader>
-                <GroupTitle>{group.label}</GroupTitle>
-                <GroupMeta>
-                  {group.transactions.length} transaction{group.transactions.length === 1 ? '' : 's'}
-                </GroupMeta>
-              </GroupHeader>
-              <Table>
-                <thead>
-                  <tr>
-                    <HeadCell>Title</HeadCell>
-                    <HeadCell>Amount</HeadCell>
-                    <HeadCell>Date</HeadCell>
-                    <HeadCell>Type</HeadCell>
-                  </tr>
-                </thead>
-                <tbody>
-                  {group.transactions.map((transaction) => (
-                    <Row key={transaction.id} onClick={() => openEditModal(transaction)}>
-                      <Cell>{transaction.title}</Cell>
-                      <Cell>{formatCurrency(transaction.amount)}</Cell>
-                      <Cell>{new Date(transaction.date).toLocaleDateString('en-IN')}</Cell>
-                      <Cell>
-                        <TypeBadge type={transaction.type}>{transaction.type}</TypeBadge>
-                      </Cell>
-                    </Row>
-                  ))}
-                </tbody>
-              </Table>
-            </GroupSection>
-          ))
-        )}
-      </TableWrapper>
+      <ContentLayout>
+        <LeftColumn>
+          <TableWrapper>
+            {loading ? (
+              <StateMessage>Loading transactions...</StateMessage>
+            ) : filteredTransactions.length === 0 ? (
+              <StateMessage>No transactions found.</StateMessage>
+            ) : (
+              groupedTransactions.map((group) => (
+                <GroupSection key={group.key}>
+                  <GroupHeader>
+                    <GroupTitle>{group.label}</GroupTitle>
+                    <GroupMeta>
+                      {group.transactions.length} transaction{group.transactions.length === 1 ? '' : 's'}
+                    </GroupMeta>
+                  </GroupHeader>
+                  <Table>
+                    <thead>
+                      <tr>
+                        <HeadCell>Title</HeadCell>
+                        <HeadCell>Amount</HeadCell>
+                        <HeadCell>Date</HeadCell>
+                        <HeadCell>Type</HeadCell>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.transactions.map((transaction) => (
+                        <Row key={transaction.id} onClick={() => openEditModal(transaction)}>
+                          <Cell>{transaction.title}</Cell>
+                          <Cell>{formatCurrency(transaction.amount)}</Cell>
+                          <Cell>{new Date(transaction.date).toLocaleDateString('en-IN')}</Cell>
+                          <Cell>
+                            <TypeBadge type={transaction.type}>{transaction.type}</TypeBadge>
+                          </Cell>
+                        </Row>
+                      ))}
+                    </tbody>
+                  </Table>
+                </GroupSection>
+              ))
+            )}
+          </TableWrapper>
+        </LeftColumn>
+
+        <RightColumn>
+          <ChartCard>
+            <ChartTitle>Monthly Spending Trend</ChartTitle>
+            {loading ? (
+              <ChartState>Loading chart...</ChartState>
+            ) : monthlyTrendData.length === 0 ? (
+              <ChartState>No spending data for selected filters.</ChartState>
+            ) : (
+              <ChartHolder>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={monthlyTrendData} margin={{ top: 8, right: 10, left: 4, bottom: 8 }}>
+                    <CartesianGrid stroke="var(--color-grey-200)" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fontSize: 12, fill: 'var(--color-grey-600)' }} />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: 'var(--color-grey-600)' }}
+                      tickFormatter={(value) => formatCurrency(value)}
+                    />
+                    <Tooltip content={<SpendingTooltip />} />
+                    <Line
+                      type="monotone"
+                      dataKey="spending"
+                      name="Spending"
+                      stroke="var(--color-brand-700)"
+                      strokeWidth={2.5}
+                      dot={{ r: 3 }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartHolder>
+            )}
+          </ChartCard>
+        </RightColumn>
+      </ContentLayout>
 
       <Modal isOpen={Boolean(editingTransaction)} onClose={closeEditModal}>
         <EditTitle>Edit Transaction</EditTitle>
