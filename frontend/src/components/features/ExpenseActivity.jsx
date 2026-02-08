@@ -11,6 +11,13 @@ import { EXPENSE_CATEGORIES } from '../expenses/constants/expenseCategories';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
 
+const formatExpenseDate = (dateValue) => {
+  if (!dateValue) return 'N/A';
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return 'N/A';
+  return parsed.toLocaleDateString('en-IN');
+};
+
 const StyledToday = styled.div`
   background-color: var(--color-grey-0);
   border: 1px solid var(--color-grey-100);
@@ -283,7 +290,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
               <ListItemContent>
                 <strong>Amount:</strong> {formatCurrency(expense.amount)}
                 <br />
-                <strong>Date:</strong> {new Date(expense.date).toLocaleDateString()}
+                <strong>Date:</strong> {formatExpenseDate(expense.date)}
               </ListItemContent>
               {hoveredExpense && hoveredExpense.expense_id === expense.expense_id && (
                 <Tooltip className="tooltip">
