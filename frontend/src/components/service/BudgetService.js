@@ -26,7 +26,7 @@ class BudgetService {
       });
       return response.data;
     } catch (error) {
-      console.error('Error fetching :', error.message);
+      console.error('Error fetching current month budgets:', error.message);
       throw error;
     }
   }
