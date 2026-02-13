@@ -112,6 +112,19 @@ const Tooltip = styled.div`
 const EditForm = styled.form`
   display: grid;
   gap: 1rem;
+
+  & input,
+  & textarea,
+  & select {
+    background: var(--color-grey-50);
+    color: var(--color-grey-800);
+    border: 1px solid var(--color-grey-300);
+  }
+
+  & input::placeholder,
+  & textarea::placeholder {
+    color: var(--color-grey-500);
+  }
 `;
 
 const Select = styled.select`
@@ -119,7 +132,8 @@ const Select = styled.select`
   padding: 10px 12px;
   border: 1px solid var(--color-grey-300);
   border-radius: var(--border-radius-md);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--color-grey-50);
+  color: var(--color-grey-800);
   margin-top: 1rem;
 
   &:focus {

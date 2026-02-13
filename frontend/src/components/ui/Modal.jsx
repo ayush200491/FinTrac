@@ -18,7 +18,7 @@ const ModalOverlay = styled.div`
 const ModalContainer = styled.div`
   position: relative;
   width: min(56rem, calc(100vw - 2rem));
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.78));
+  background: linear-gradient(180deg, var(--color-grey-0), var(--color-grey-50));
   border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-lg);
   padding: 2rem;
