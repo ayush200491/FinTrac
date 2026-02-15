@@ -1,8 +1,15 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 import Heading from "../ui/Heading";
 import Row from "../ui/Row";
 import { formatCurrency } from '../utils/helpers';
+import Modal from '../ui/Modal';
+import { Button, ErrorMessage, Input, Label, TextArea } from '../ui';
+import ExpenseService from '../service/ExpenseService';
+import UserService from '../service/UserService';
+import { EXPENSE_CATEGORIES } from '../expenses/constants/expenseCategories';
+import { useAuth } from '../context/AuthContext';
+import { useUser } from '../hooks/useUser';
 
 const StyledToday = styled.div`
   background-color: var(--color-grey-0);
@@ -102,8 +109,61 @@ const Tooltip = styled.div`
   }
 `;
 
-function ExpenseActivity({expenses}) {
+const EditForm = styled.form`
+  display: grid;
+  gap: 1rem;
+`;
+
+const Select = styled.select`
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--border-radius-md);
+  background: rgba(255, 255, 255, 0.82);
+  margin-top: 1rem;
+
+  &:focus {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 4px rgba(17, 127, 115, 0.14);
+    outline: none;
+  }
+`;
+
+const ActionsRow = styled.div`
+  display: flex;
+  gap: 0.8rem;
+  justify-content: flex-end;
+`;
+
+const ModalTitle = styled.h3`
+  margin: 0 0 0.6rem;
+  color: var(--color-grey-800);
+  font-size: 2rem;
+`;
+
+function ExpenseActivity({ expenses, onExpensesChanged }) {
   const [hoveredExpense, setHoveredExpense] = useState(null);
+  const [selectedExpense, setSelectedExpense] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('OTHER');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
+  const { loggedInUser } = useAuth();
+  const { user } = useUser();
+  const username = loggedInUser || user?.username;
+
+  useEffect(() => {
+    if (!selectedExpense) return;
+
+    setAmount(String(selectedExpense.amount ?? ''));
+    setCategory(selectedExpense.category || 'OTHER');
+    setDescription(selectedExpense.description || '');
+    const selectedDate = selectedExpense.date ? new Date(selectedExpense.date) : new Date();
+    setDate(selectedDate.toISOString().split('T')[0]);
+    setFormError('');
+  }, [selectedExpense]);
 
   const handleMouseEnter = (expense) => {
     setHoveredExpense(expense);
@@ -111,6 +171,84 @@ function ExpenseActivity({expenses}) {
 
   const handleMouseLeave = () => {
     setHoveredExpense(null);
+  };
+
+  const handleItemClick = (expense) => {
+    setSelectedExpense(expense);
+  };
+
+  const closeEditor = () => {
+    setSelectedExpense(null);
+    setFormError('');
+  };
+
+  const handleExpenseUpdate = async (event) => {
+    event.preventDefault();
+    if (!selectedExpense) return;
+
+    const parsedAmount = Number(amount);
+    if (!parsedAmount || parsedAmount <= 0) {
+      setFormError('Enter a valid amount greater than 0');
+      return;
+    }
+    if (!category) {
+      setFormError('Please select a category');
+      return;
+    }
+
+    setLoading(true);
+    setFormError('');
+
+    try {
+      const payload = {
+        username,
+        expenseType: selectedExpense.expenseType || 'daily',
+        amount: parsedAmount,
+        category,
+        description,
+        date: date || new Date().toISOString().split('T')[0],
+      };
+
+      await ExpenseService.updateExpense(selectedExpense.expense_id, payload);
+
+      const oldAmount = Number(selectedExpense.amount || 0);
+      const delta = parsedAmount - oldAmount;
+      if (username && delta !== 0) {
+        await UserService.addBalance(username, -delta);
+        window.dispatchEvent(new Event('expensewise:user-refresh'));
+      }
+
+      if (onExpensesChanged) onExpensesChanged();
+      closeEditor();
+    } catch (error) {
+      setFormError(error?.response?.data?.message || error?.message || 'Failed to update expense');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExpenseDelete = async () => {
+    if (!selectedExpense) return;
+    if (!window.confirm('Delete this expense?')) return;
+
+    setLoading(true);
+    setFormError('');
+    try {
+      await ExpenseService.deleteExpense(selectedExpense.expense_id);
+
+      const oldAmount = Number(selectedExpense.amount || 0);
+      if (username && oldAmount > 0) {
+        await UserService.addBalance(username, oldAmount);
+        window.dispatchEvent(new Event('expensewise:user-refresh'));
+      }
+
+      if (onExpensesChanged) onExpensesChanged();
+      closeEditor();
+    } catch (error) {
+      setFormError(error?.response?.data?.message || error?.message || 'Failed to delete expense');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -125,6 +263,7 @@ function ExpenseActivity({expenses}) {
               key={expense.expense_id}
               onMouseEnter={() => handleMouseEnter(expense)}
               onMouseLeave={handleMouseLeave}
+              onClick={() => handleItemClick(expense)}
             >
               <ListItemHeading>{expense.category}</ListItemHeading>
               <ListItemContent>
@@ -143,6 +282,75 @@ function ExpenseActivity({expenses}) {
       ) : (
         <NoActivity>No expenses recorded today.</NoActivity>
       )}
+
+      <Modal isOpen={Boolean(selectedExpense)} onClose={closeEditor}>
+        <ModalTitle>Edit Expense</ModalTitle>
+        <EditForm onSubmit={handleExpenseUpdate}>
+          <div>
+            <Label htmlFor="expense-amount">Amount</Label>
+            <Input
+              id="expense-amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="expense-category">Category</Label>
+            <Select
+              id="expense-category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            >
+              {EXPENSE_CATEGORIES.map((cat) => (
+                <option key={cat.name} value={cat.name}>
+                  {cat.icon} {cat.displayName}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="expense-date">Date</Label>
+            <Input
+              id="expense-date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="expense-description">Description</Label>
+            <TextArea
+              id="expense-description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description"
+            />
+          </div>
+
+          {formError && <ErrorMessage>{formError}</ErrorMessage>}
+
+          <ActionsRow>
+            <Button type="button" variation="danger" onClick={handleExpenseDelete} disabled={loading}>
+              Delete
+            </Button>
+            <Button type="button" variation="secondary" onClick={closeEditor} disabled={loading}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Saving...' : 'Update'}
+            </Button>
+          </ActionsRow>
+        </EditForm>
+      </Modal>
     </StyledToday>
   );
 }

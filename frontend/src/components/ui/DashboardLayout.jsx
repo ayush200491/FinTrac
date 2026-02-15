@@ -155,7 +155,10 @@ function DashboardLayout() {
 
       <StyledDashboardLayout>
         <Stats summary={summary} />
-        <ExpenseActivity expenses={sortExpensesByDateLatest()} />
+        <ExpenseActivity
+          expenses={sortExpensesByDateLatest()}
+          onExpensesChanged={fetchExpenses}
+        />
         <PieChart expenses={expenses} />
         <LineChart expenses={sortExpensesByDateOldest()} />
       </StyledDashboardLayout>
