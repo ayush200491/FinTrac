@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from "styled-components";
 import Stats from '../features/Stats';
 import ExpenseActivity from '../features/ExpenseActivity';
@@ -7,6 +7,10 @@ import PieChart from '../features/PieChartComponent';
 import ExpenseForm from '../expenses/ExpenseForm';
 import { AiOutlinePlus } from 'react-icons/ai';
 import { useExpenseSummary } from '../hooks/useExpenseSummary';
+import BudgetService from '../service/BudgetService';
+import { useAuth } from '../context/AuthContext';
+import { useUser } from '../hooks/useUser';
+import { formatCurrency } from '../utils/helpers';
 
 const StyledDashboardLayout = styled.div`
   display: grid;
@@ -22,6 +26,35 @@ const StyledDashboardLayout = styled.div`
   @media (max-width: 720px) {
     grid-template-columns: 1fr;
   }
+`;
+
+const BudgetAlertBanner = styled.div`
+  margin-bottom: 1.6rem;
+  border: 1px solid var(--color-yellow-600);
+  background: linear-gradient(160deg, var(--color-yellow-100), rgba(255, 242, 203, 0.72));
+  border-radius: var(--border-radius-lg);
+  padding: 1.4rem 1.6rem;
+  box-shadow: var(--shadow-sm);
+`;
+
+const BudgetAlertTitle = styled.h3`
+  margin: 0 0 0.6rem;
+  color: var(--color-grey-800);
+  font-size: 1.7rem;
+  font-weight: 700;
+`;
+
+const BudgetAlertList = styled.ul`
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+`;
+
+const BudgetAlertItem = styled.li`
+  color: var(--color-grey-700);
+  font-size: 1.4rem;
+  font-weight: 600;
 `;
 
 const AddButton = styled.button`
@@ -56,7 +89,33 @@ const AddButton = styled.button`
 
 function DashboardLayout() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [budgetAlerts, setBudgetAlerts] = useState([]);
   const { expenses, fetchExpenses, summary, sortExpensesByDateLatest, sortExpensesByDateOldest } = useExpenseSummary();
+  const { loggedInUser } = useAuth();
+  const { user } = useUser();
+  const username = loggedInUser || user?.username;
+
+  useEffect(() => {
+    const fetchBudgetAlerts = async () => {
+      if (!username) {
+        setBudgetAlerts([]);
+        return;
+      }
+
+      try {
+        const budgets = await BudgetService.getBudgetsForCurrentMonth(username);
+        const alertBudgets = (Array.isArray(budgets) ? budgets : []).filter(
+          (budget) => budget?.limitExceeded || budget?.alertTriggered,
+        );
+        setBudgetAlerts(alertBudgets);
+      } catch (error) {
+        console.error('Error fetching budget alerts for dashboard:', error);
+        setBudgetAlerts([]);
+      }
+    };
+
+    fetchBudgetAlerts();
+  }, [username]);
 
   const handleOpenForm = () => {
     setIsFormOpen(true);
@@ -78,6 +137,22 @@ function DashboardLayout() {
 
   return (
     <>
+      {budgetAlerts.length > 0 && (
+        <BudgetAlertBanner>
+          <BudgetAlertTitle>
+            Budget alerts this month ({budgetAlerts.length})
+          </BudgetAlertTitle>
+          <BudgetAlertList>
+            {budgetAlerts.map((budget) => (
+              <BudgetAlertItem key={budget.budget_id}>
+                {budget.category}: {budget.limitExceeded ? 'Exceeded by' : 'Near limit, remaining'}{' '}
+                {formatCurrency(Math.abs(budget.remaining || 0))}
+              </BudgetAlertItem>
+            ))}
+          </BudgetAlertList>
+        </BudgetAlertBanner>
+      )}
+
       <StyledDashboardLayout>
         <Stats summary={summary} />
         <ExpenseActivity expenses={sortExpensesByDateLatest()} />
