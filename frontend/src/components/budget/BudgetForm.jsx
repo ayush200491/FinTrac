@@ -146,29 +146,29 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
     category: '',
     limitAmount: '',
     alertThreshold: 80,
-    month: currentMonth,
-    year: currentYear,
   });
 
   // Populate form when editing
   useEffect(() => {
     if (editingBudget) {
-      const monthValue = Number(editingBudget.month);
-      const yearValue = Number(editingBudget.year);
-
       setFormData({
         category: editingBudget.category || '',
         limitAmount: editingBudget.limitAmount || '',
         alertThreshold: editingBudget.alertThreshold || 80,
-        month: Number.isFinite(monthValue) ? monthValue : currentMonth,
-        year: Number.isFinite(yearValue) ? yearValue : currentYear,
+      });
+    }
+    if (!editingBudget) {
+      setFormData({
+        category: '',
+        limitAmount: '',
+        alertThreshold: 80,
       });
     }
   }, [editingBudget, currentMonth, currentYear]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    const numericFields = ['limitAmount', 'alertThreshold', 'month', 'year'];
+    const numericFields = ['limitAmount', 'alertThreshold'];
 
     setFormData(prev => ({
       ...prev,
@@ -199,14 +199,6 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
       newErrors.alertThreshold = 'Alert threshold must be between 0 and 100';
     }
 
-    if (!Number.isInteger(Number(formData.month)) || formData.month < 1 || formData.month > 12) {
-      newErrors.month = 'Month must be between 1 and 12';
-    }
-
-    if (!Number.isInteger(Number(formData.year)) || formData.year < 2000 || formData.year > 2100) {
-      newErrors.year = 'Year must be between 2000 and 2100';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -225,8 +217,8 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
         category: formData.category,
         limitAmount: formData.limitAmount,
         alertThreshold: formData.alertThreshold,
-        month: formData.month,
-        year: formData.year,
+        month: currentMonth,
+        year: currentYear,
       };
 
       if (editingBudget) {
@@ -242,8 +234,6 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
         category: '',
         limitAmount: '',
         alertThreshold: 80,
-        month: currentMonth,
-        year: currentYear,
       });
 
       if (onSubmit) {
@@ -318,40 +308,6 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
               disabled={loading}
             />
             {errors.alertThreshold && <ErrorMessage>{errors.alertThreshold}</ErrorMessage>}
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="month">Month</Label>
-            <Select
-              id="month"
-              name="month"
-              value={formData.month}
-              onChange={handleChange}
-              disabled={loading}
-            >
-              {Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(2024, i).toLocaleDateString('en-US', { month: 'long' })}
-                </option>
-              ))}
-            </Select>
-          </FormGroup>
-
-          <FormGroup>
-            <Label htmlFor="year">Year</Label>
-            <Input
-              id="year"
-              name="year"
-              type="number"
-              min="2000"
-              max="2100"
-              inputMode="numeric"
-              value={formData.year}
-              onChange={handleChange}
-              disabled={loading}
-            />
-            {errors.month && <ErrorMessage>{errors.month}</ErrorMessage>}
-            {errors.year && <ErrorMessage>{errors.year}</ErrorMessage>}
           </FormGroup>
         </FormGrid>
 
