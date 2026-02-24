@@ -452,7 +452,7 @@ function BudgetList() {
 
           <CardsColumn>
             <CardsHeader>
-              <CardsTitle>Current Month Budgets</CardsTitle>
+              <CardsTitle>Monthly Budgets</CardsTitle>
               <CardsMeta>{sortedBudgets.length} budgets</CardsMeta>
             </CardsHeader>
 
