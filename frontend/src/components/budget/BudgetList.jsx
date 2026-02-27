@@ -268,7 +268,6 @@ function BudgetList() {
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
-  const [filter, setFilter] = useState('current'); // 'all' or 'current'
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('category');
 
@@ -278,7 +277,7 @@ function BudgetList() {
     if (username) {
       fetchBudgets();
     }
-  }, [username, filter]);
+  }, [username]);
 
   const fetchBudgets = async () => {
     if (!username) return;
@@ -344,13 +343,11 @@ function BudgetList() {
   const currentYear = now.getFullYear();
 
   const visibleBudgets = useMemo(() => {
-    if (filter !== 'current') return budgets;
-
     return budgets.filter((budget) => {
       const { month, year } = normalizeBudgetDate(budget);
       return month === currentMonth && year === currentYear;
     });
-  }, [budgets, filter, currentMonth, currentYear]);
+  }, [budgets, currentMonth, currentYear]);
 
   const searchedBudgets = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -378,29 +375,6 @@ function BudgetList() {
     return budgetsToSort.sort(compareByCategory);
   }, [searchedBudgets, sortBy]);
 
-  const groupedBudgets = useMemo(() => {
-    const groups = new Map();
-
-    sortedBudgets.forEach((budget) => {
-      const { month, year } = normalizeBudgetDate(budget);
-      const safeMonth = month || 1;
-      const safeYear = year || currentYear;
-      const key = `${safeYear}-${String(safeMonth).padStart(2, '0')}`;
-
-      if (!groups.has(key)) {
-        const label = new Date(safeYear, safeMonth - 1, 1).toLocaleDateString('en-IN', {
-          month: 'long',
-          year: 'numeric',
-        });
-        groups.set(key, { key, label, budgets: [] });
-      }
-
-      groups.get(key).budgets.push(budget);
-    });
-
-    return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
-  }, [sortedBudgets, currentYear]);
-
   // Calculate summary stats for currently visible budgets only.
   const totalBudget = sortedBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
   const totalSpent = sortedBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
@@ -424,18 +398,6 @@ function BudgetList() {
               <option value="highestSpent">Sort: Highest Spent</option>
               <option value="lowestRemaining">Sort: Lowest Remaining</option>
             </SortSelect>
-            <FilterButton
-              active={filter === 'current'}
-              onClick={() => setFilter('current')}
-            >
-              This Month
-            </FilterButton>
-            <FilterButton
-              active={filter === 'all'}
-              onClick={() => setFilter('all')}
-            >
-              All Budgets
-            </FilterButton>
           </FilterBar>
         </ControlsLeft>
         <AddButton onClick={handleAddBudget} disabled={loading}>
@@ -456,11 +418,7 @@ function BudgetList() {
         <EmptyState>
           <EmptyIcon>📋</EmptyIcon>
           <EmptyTitle>No Budgets Yet</EmptyTitle>
-          <EmptyText>
-            {filter === 'current'
-              ? 'No budgets found for the current month. Switch to All Budgets to view other months.'
-              : 'No budgets match your search. Clear the search to see all categories.'}
-          </EmptyText>
+          <EmptyText>No budgets found for the current month. Create one to get started.</EmptyText>
           <AddButton onClick={handleAddBudget}>Create First Budget</AddButton>
         </EmptyState>
       ) : (
@@ -494,38 +452,20 @@ function BudgetList() {
 
           <CardsColumn>
             <CardsHeader>
-              <CardsTitle>{filter === 'current' ? 'Current Month Budgets' : 'Budget Categories by Month'}</CardsTitle>
+              <CardsTitle>Current Month Budgets</CardsTitle>
               <CardsMeta>{sortedBudgets.length} budgets</CardsMeta>
             </CardsHeader>
 
-            {filter === 'current' ? (
-              <BudgetsGrid>
-                {sortedBudgets.map((budget) => (
-                  <BudgetCard
-                    key={budget.budget_id}
-                    budget={budget}
-                    onEdit={handleEditBudget}
-                    onDelete={handleDeleteBudget}
-                  />
-                ))}
-              </BudgetsGrid>
-            ) : (
-              groupedBudgets.map((group) => (
-                <MonthSection key={group.key}>
-                  <MonthSectionTitle>{group.label}</MonthSectionTitle>
-                  <BudgetsGrid>
-                    {group.budgets.map((budget) => (
-                      <BudgetCard
-                        key={budget.budget_id}
-                        budget={budget}
-                        onEdit={handleEditBudget}
-                        onDelete={handleDeleteBudget}
-                      />
-                    ))}
-                  </BudgetsGrid>
-                </MonthSection>
-              ))
-            )}
+            <BudgetsGrid>
+              {sortedBudgets.map((budget) => (
+                <BudgetCard
+                  key={budget.budget_id}
+                  budget={budget}
+                  onEdit={handleEditBudget}
+                  onDelete={handleDeleteBudget}
+                />
+              ))}
+            </BudgetsGrid>
           </CardsColumn>
         </PageLayout>
       )}
