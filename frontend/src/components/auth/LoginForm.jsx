@@ -11,21 +11,21 @@ const FullPageContainer = styled.div`
   place-items: center;
   padding: 2rem;
   background:
-    radial-gradient(circle at 15% 15%, rgba(17, 127, 115, 0.22), transparent 28%),
-    radial-gradient(circle at 85% 0%, rgba(22, 104, 154, 0.2), transparent 32%),
-    linear-gradient(140deg, var(--color-grey-50), var(--color-grey-100));
+    radial-gradient(circle at 16% 14%, rgba(83, 208, 194, 0.2), transparent 26%),
+    radial-gradient(circle at 84% 0%, rgba(47, 108, 167, 0.22), transparent 30%),
+    linear-gradient(145deg, #0b1524, #101e31 56%, #15263a);
 `;
 
 const FormContainer = styled.div`
   margin: auto;
-  padding: 2.4rem;
-  border-radius: var(--border-radius-lg);
+  padding: 2.6rem;
+  border-radius: 24px;
   width: 100%;
   max-width: 44rem;
-  background: linear-gradient(170deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.75));
-  border: 1px solid var(--color-grey-200);
-  box-shadow: var(--shadow-lg);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(170deg, rgba(21, 32, 51, 0.96), rgba(15, 23, 38, 0.94));
+  border: 1px solid rgba(116, 227, 213, 0.18);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(14px);
 `;
 
 const Form = styled.form`
@@ -60,27 +60,33 @@ const Checkbox = styled.input`
 
 const CheckboxLabel = styled.label`
   font-weight: 600;
+  color: rgba(237, 243, 248, 0.88);
 `;
 
 const Label = styled.label`
   display: block;
   font-weight: 600;
   margin: 0 0 0.6rem;
-  color: var(--color-grey-700);
+  color: rgba(237, 243, 248, 0.88);
 `;
 
 const Input = styled.input`
   width: 100%;
   padding: 1rem 1.1rem;
   font-size: 1.5rem;
-  border: 1px solid var(--color-grey-300);
+  border: 1px solid rgba(191, 248, 239, 0.18);
   border-radius: var(--border-radius-md);
   box-sizing: border-box;
-  background-color: rgba(255, 255, 255, 0.82);
+  background-color: rgba(11, 21, 36, 0.86);
+  color: #edf3f8;
+
+  &::placeholder {
+    color: rgba(219, 229, 239, 0.4);
+  }
 
   &:focus {
-    border-color: var(--color-brand-500);
-    box-shadow: 0 0 0 4px rgba(17, 127, 115, 0.14);
+    border-color: var(--color-brand-600);
+    box-shadow: 0 0 0 4px rgba(116, 227, 213, 0.18);
     outline: none;
   }
 `;
@@ -89,12 +95,12 @@ const Title = styled.h2`
   margin-bottom: 1.6rem;
   font-size: 2.5rem;
   font-family: "Space Grotesk", sans-serif;
-  color: var(--color-grey-800);
+  color: #edf3f8;
 `;
 
 const Message = styled.span`
   margin: 0.6rem 0;
-  color: ${(props) => (props.errors ? "var(--color-red-700)" : "var(--color-green-700)")};
+  color: ${(props) => (props.errors ? "#ffc0c6" : "#9af0e4")};
   overflow: auto;
   font-weight: 600;
 `;
@@ -104,7 +110,7 @@ const LinkContainer = styled.div`
   text-align: center;
 
   a {
-    color: var(--color-brand-700);
+    color: #9af0e4;
     font-weight: 600;
   }
 `;
@@ -115,7 +121,7 @@ const SignupContainer = styled.div`
   text-align: center;
 
   a {
-    color: var(--color-brand-700);
+    color: #bff8ef;
     font-weight: 700;
   }
 `;

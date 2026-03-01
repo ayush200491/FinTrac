@@ -500,7 +500,7 @@ function BudgetList() {
 
             {filter === 'current' ? (
               <BudgetsGrid>
-                {visibleBudgets.map(budget => (
+                {sortedBudgets.map((budget) => (
                   <BudgetCard
                     key={budget.budget_id}
                     budget={budget}
