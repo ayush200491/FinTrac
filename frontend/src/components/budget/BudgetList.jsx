@@ -213,6 +213,22 @@ const FilterBar = styled.div`
   flex-wrap: wrap;
 `;
 
+const SortSelect = styled.select`
+  min-width: 220px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-grey-200);
+  border-radius: 8px;
+  background: var(--color-grey-0);
+  color: var(--color-grey-800);
+  font-size: 1.4rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-600);
+    box-shadow: 0 0 0 3px rgba(17, 127, 115, 0.12);
+  }
+`;
+
 const SearchInput = styled.input`
   min-width: 240px;
   padding: 8px 12px;
@@ -254,6 +270,7 @@ function BudgetList() {
   const [editingBudget, setEditingBudget] = useState(null);
   const [filter, setFilter] = useState('current'); // 'all' or 'current'
   const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('category');
 
   const username = loggedInUser || user?.username;
 
@@ -345,10 +362,26 @@ function BudgetList() {
     );
   }, [visibleBudgets, searchTerm]);
 
+  const sortedBudgets = useMemo(() => {
+    const budgetsToSort = [...searchedBudgets];
+
+    const compareByCategory = (a, b) => (a.category || '').localeCompare(b.category || '');
+
+    if (sortBy === 'highestSpent') {
+      return budgetsToSort.sort((a, b) => (b.currentSpent || 0) - (a.currentSpent || 0));
+    }
+
+    if (sortBy === 'lowestRemaining') {
+      return budgetsToSort.sort((a, b) => (a.remaining || 0) - (b.remaining || 0));
+    }
+
+    return budgetsToSort.sort(compareByCategory);
+  }, [searchedBudgets, sortBy]);
+
   const groupedBudgets = useMemo(() => {
     const groups = new Map();
 
-    searchedBudgets.forEach((budget) => {
+    sortedBudgets.forEach((budget) => {
       const { month, year } = normalizeBudgetDate(budget);
       const safeMonth = month || 1;
       const safeYear = year || currentYear;
@@ -366,12 +399,12 @@ function BudgetList() {
     });
 
     return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
-  }, [searchedBudgets, currentYear]);
+  }, [sortedBudgets, currentYear]);
 
   // Calculate summary stats for currently visible budgets only.
-  const totalBudget = searchedBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
-  const totalSpent = searchedBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
-  const alertCount = searchedBudgets.filter(b => b.alertTriggered || b.limitExceeded).length;
+  const totalBudget = sortedBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
+  const totalSpent = sortedBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
+  const alertCount = sortedBudgets.filter(b => b.alertTriggered || b.limitExceeded).length;
 
   return (
     <Container>
@@ -386,6 +419,11 @@ function BudgetList() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+            <SortSelect value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <option value="category">Sort: Category</option>
+              <option value="highestSpent">Sort: Highest Spent</option>
+              <option value="lowestRemaining">Sort: Lowest Remaining</option>
+            </SortSelect>
             <FilterButton
               active={filter === 'current'}
               onClick={() => setFilter('current')}
@@ -414,7 +452,7 @@ function BudgetList() {
 
       {loading ? (
         <LoadingSpinner>Loading budgets...</LoadingSpinner>
-      ) : searchedBudgets.length === 0 ? (
+      ) : sortedBudgets.length === 0 ? (
         <EmptyState>
           <EmptyIcon>📋</EmptyIcon>
           <EmptyTitle>No Budgets Yet</EmptyTitle>
@@ -457,7 +495,7 @@ function BudgetList() {
           <CardsColumn>
             <CardsHeader>
               <CardsTitle>{filter === 'current' ? 'Current Month Budgets' : 'Budget Categories by Month'}</CardsTitle>
-              <CardsMeta>{searchedBudgets.length} budgets</CardsMeta>
+              <CardsMeta>{sortedBudgets.length} budgets</CardsMeta>
             </CardsHeader>
 
             {filter === 'current' ? (
