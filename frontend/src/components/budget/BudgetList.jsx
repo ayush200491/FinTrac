@@ -213,6 +213,22 @@ const FilterBar = styled.div`
   flex-wrap: wrap;
 `;
 
+const SearchInput = styled.input`
+  min-width: 240px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-grey-200);
+  border-radius: 8px;
+  background: var(--color-grey-0);
+  color: var(--color-grey-800);
+  font-size: 1.4rem;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-600);
+    box-shadow: 0 0 0 3px rgba(17, 127, 115, 0.12);
+  }
+`;
+
 const FilterButton = styled.button`
   padding: 8px 16px;
   background: ${props => props.active ? 'var(--color-brand-600)' : 'var(--color-grey-200)'};
@@ -237,6 +253,7 @@ function BudgetList() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState(null);
   const [filter, setFilter] = useState('current'); // 'all' or 'current'
+  const [searchTerm, setSearchTerm] = useState('');
 
   const username = loggedInUser || user?.username;
 
@@ -318,10 +335,20 @@ function BudgetList() {
     });
   }, [budgets, filter, currentMonth, currentYear]);
 
+  const searchedBudgets = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) return visibleBudgets;
+
+    return visibleBudgets.filter((budget) =>
+      (budget.category || '').toLowerCase().includes(normalizedSearch),
+    );
+  }, [visibleBudgets, searchTerm]);
+
   const groupedBudgets = useMemo(() => {
     const groups = new Map();
 
-    visibleBudgets.forEach((budget) => {
+    searchedBudgets.forEach((budget) => {
       const { month, year } = normalizeBudgetDate(budget);
       const safeMonth = month || 1;
       const safeYear = year || currentYear;
@@ -339,12 +366,12 @@ function BudgetList() {
     });
 
     return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
-  }, [visibleBudgets, currentYear]);
+  }, [searchedBudgets, currentYear]);
 
   // Calculate summary stats for currently visible budgets only.
-  const totalBudget = visibleBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
-  const totalSpent = visibleBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
-  const alertCount = visibleBudgets.filter(b => b.alertTriggered || b.limitExceeded).length;
+  const totalBudget = searchedBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
+  const totalSpent = searchedBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
+  const alertCount = searchedBudgets.filter(b => b.alertTriggered || b.limitExceeded).length;
 
   return (
     <Container>
@@ -353,6 +380,12 @@ function BudgetList() {
           <PageTitle>💰 Budget Management</PageTitle>
           <Subtitle>Track limits, spending, and alerts by category in one place.</Subtitle>
           <FilterBar>
+            <SearchInput
+              type="search"
+              placeholder="Search category..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
             <FilterButton
               active={filter === 'current'}
               onClick={() => setFilter('current')}
@@ -381,14 +414,14 @@ function BudgetList() {
 
       {loading ? (
         <LoadingSpinner>Loading budgets...</LoadingSpinner>
-      ) : visibleBudgets.length === 0 ? (
+      ) : searchedBudgets.length === 0 ? (
         <EmptyState>
           <EmptyIcon>📋</EmptyIcon>
           <EmptyTitle>No Budgets Yet</EmptyTitle>
           <EmptyText>
             {filter === 'current'
               ? 'No budgets found for the current month. Switch to All Budgets to view other months.'
-              : 'Create your first budget to track spending by category.'}
+              : 'No budgets match your search. Clear the search to see all categories.'}
           </EmptyText>
           <AddButton onClick={handleAddBudget}>Create First Budget</AddButton>
         </EmptyState>
@@ -424,7 +457,7 @@ function BudgetList() {
           <CardsColumn>
             <CardsHeader>
               <CardsTitle>{filter === 'current' ? 'Current Month Budgets' : 'Budget Categories by Month'}</CardsTitle>
-              <CardsMeta>{visibleBudgets.length} budgets</CardsMeta>
+              <CardsMeta>{searchedBudgets.length} budgets</CardsMeta>
             </CardsHeader>
 
             {filter === 'current' ? (
