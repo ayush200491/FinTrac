@@ -138,34 +138,41 @@ const ErrorMessage = styled.div`
 function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
   const { loggedInUser } = useAuth();
   const { user } = useUser();
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth() + 1;
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     category: '',
     limitAmount: '',
     alertThreshold: 80,
-    month: new Date().getMonth() + 1,
-    year: new Date().getFullYear(),
+    month: currentMonth,
+    year: currentYear,
   });
 
   // Populate form when editing
   useEffect(() => {
     if (editingBudget) {
+      const monthValue = Number(editingBudget.month);
+      const yearValue = Number(editingBudget.year);
+
       setFormData({
         category: editingBudget.category || '',
         limitAmount: editingBudget.limitAmount || '',
         alertThreshold: editingBudget.alertThreshold || 80,
-        month: editingBudget.month || new Date().getMonth() + 1,
-        year: editingBudget.year || new Date().getFullYear(),
+        month: Number.isFinite(monthValue) ? monthValue : currentMonth,
+        year: Number.isFinite(yearValue) ? yearValue : currentYear,
       });
     }
-  }, [editingBudget]);
+  }, [editingBudget, currentMonth, currentYear]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    const numericFields = ['limitAmount', 'alertThreshold', 'month', 'year'];
+
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'limitAmount' || name === 'alertThreshold' ? parseFloat(value) || '' : value
+      [name]: numericFields.includes(name) ? (value === '' ? '' : Number(value)) : value
     }));
     // Clear error for this field
     if (errors[name]) {
@@ -184,8 +191,20 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
       newErrors.limitAmount = 'Budget limit must be greater than 0';
     }
 
+    if (formData.limitAmount && Number(formData.limitAmount) > 1000000000) {
+      newErrors.limitAmount = 'Budget limit is too large';
+    }
+
     if (formData.alertThreshold < 0 || formData.alertThreshold > 100) {
       newErrors.alertThreshold = 'Alert threshold must be between 0 and 100';
+    }
+
+    if (!Number.isInteger(Number(formData.month)) || formData.month < 1 || formData.month > 12) {
+      newErrors.month = 'Month must be between 1 and 12';
+    }
+
+    if (!Number.isInteger(Number(formData.year)) || formData.year < 2000 || formData.year > 2100) {
+      newErrors.year = 'Year must be between 2000 and 2100';
     }
 
     setErrors(newErrors);
@@ -223,8 +242,8 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
         category: '',
         limitAmount: '',
         alertThreshold: 80,
-        month: new Date().getMonth() + 1,
-        year: new Date().getFullYear(),
+        month: currentMonth,
+        year: currentYear,
       });
 
       if (onSubmit) {
@@ -275,6 +294,8 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
               name="limitAmount"
               type="number"
               step="0.01"
+                min="0.01"
+                inputMode="decimal"
               placeholder="0.00"
               value={formData.limitAmount}
               onChange={handleChange}
@@ -291,6 +312,7 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
               type="number"
               min="0"
               max="100"
+                inputMode="numeric"
               value={formData.alertThreshold}
               onChange={handleChange}
               disabled={loading}
@@ -321,10 +343,15 @@ function BudgetForm({ isOpen, onClose, onSubmit, editingBudget = null }) {
               id="year"
               name="year"
               type="number"
+              min="2000"
+              max="2100"
+              inputMode="numeric"
               value={formData.year}
               onChange={handleChange}
               disabled={loading}
             />
+            {errors.month && <ErrorMessage>{errors.month}</ErrorMessage>}
+            {errors.year && <ErrorMessage>{errors.year}</ErrorMessage>}
           </FormGroup>
         </FormGrid>
 
