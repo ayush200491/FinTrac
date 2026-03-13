@@ -6,6 +6,7 @@ import BudgetCard from './BudgetCard';
 import BudgetForm from './BudgetForm';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
+import { formatCurrency } from '../utils/helpers';
 
 const Container = styled.div`
   padding: 2.4rem;
@@ -227,13 +228,6 @@ const FilterButton = styled.button`
     transform: translateY(-2px);
   }
 `;
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR'
-  }).format(value);
-};
 
 function BudgetList() {
   const { loggedInUser } = useAuth();
