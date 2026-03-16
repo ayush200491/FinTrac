@@ -1,5 +1,28 @@
 # Creating a React app using Webpack
 
+## ExpenseWise frontend environment
+
+This frontend reads the backend URL from `REACT_APP_API_URL`.
+
+- Default (when not set): `http://localhost:8080`
+- Used by service calls and webpack dev proxy target.
+
+Examples:
+
+```bash
+# macOS/Linux
+REACT_APP_API_URL=http://localhost:8080 npm start
+
+# Windows PowerShell
+$env:REACT_APP_API_URL="http://localhost:8080"; npm start
+```
+
+For production builds:
+
+```bash
+REACT_APP_API_URL=https://your-api-domain.com npm run build
+```
+
 Creating a React app using Webpack involves several steps, including setting up the project structure, installing dependencies, and configuring Webpack.
 
 ## Step-by-step guide to create a React app with Webpack

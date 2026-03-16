@@ -1,6 +1,9 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
+
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 module.exports = {
   entry: './src/index.js',
@@ -31,6 +34,9 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html'
     }),
+    new webpack.DefinePlugin({
+      'process.env.REACT_APP_API_URL': JSON.stringify(API_URL),
+    }),
     new CopyWebpackPlugin({
       patterns: [
         {
@@ -56,7 +62,7 @@ module.exports = {
     // Proxy requests to the backend server
     proxy: [{
       context: ['/api'],
-      target: 'http://localhost:8080',
+      target: API_URL,
       logLevel: 'debug' /*optional*/,
       pathRewrite: { '^/api': '' },
       changeOrigin: true,
