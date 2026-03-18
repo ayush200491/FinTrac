@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { buildApiUrl } from './apiConfig';
 
-const API_URL = 'http://localhost:8080/budgets';
+const API_URL = buildApiUrl('/budgets');
 
 class BudgetService {
   

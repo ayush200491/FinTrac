@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { buildApiUrl } from './apiConfig';
 
 // const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
 // const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
@@ -8,7 +9,7 @@ import axios from 'axios';
 // axios.defaults.headers.common['X-XSRF-TOKEN'] = csrfToken;
 // axios.defaults.withCredentials = true; // Ensure credentials are sent
 
-const API_URL = 'http://localhost:8080/expenses';
+const API_URL = buildApiUrl('/expenses');
 
 class ExpenseService {
   // Function to add a new expense

@@ -1,8 +1,11 @@
 import axios from 'axios';
+import { buildApiUrl } from './apiConfig';
+
+const USERS_API_URL = buildApiUrl('/users');
 
 const fetchUsers = async () => {
   try {
-    const response = await fetch('http://localhost:8080/users/admin', {
+    const response = await fetch(`${USERS_API_URL}/admin`, {
       method: 'GET',
       headers: {
         // No need to set Content-Type for GET requests
@@ -64,7 +67,7 @@ const createUser = async (userData) => {
     const profileImageFile = userData.profileImage !== null ? userData.profileImage[0] : null;
     formData.append('profileImage', profileImageFile);
 
-    const response = await axios.post('http://localhost:8080/users/admin', formData, {
+    const response = await axios.post(`${USERS_API_URL}/admin`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -133,7 +136,7 @@ const updateUser = async (userId, userData) => {
     })], { type: 'application/json' }));
     formData.append('profileImage', userData.profileImage[0]);
 
-    const response = await axios.put(`http://localhost:8080/users/admin/${userId}`, formData, {
+    const response = await axios.put(`${USERS_API_URL}/admin/${userId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -153,7 +156,7 @@ const updateUser = async (userId, userData) => {
 
 const deleteUser = async (userId) => {
   try {
-    const response = await fetch(`http://localhost:8080/users/admin/${userId}`, {
+    const response = await fetch(`${USERS_API_URL}/admin/${userId}`, {
       method: 'DELETE',
       headers: {
         // No need to set Content-Type for DELETE requests
@@ -178,7 +181,7 @@ const deleteUser = async (userId) => {
 
 const addBalance = async (username, amount) => {
   const response = await axios.post(
-    `http://localhost:8080/users/user/${username}/balance/add`,
+    `${USERS_API_URL}/user/${username}/balance/add`,
     null,
     {
       params: { amount },
@@ -190,7 +193,7 @@ const addBalance = async (username, amount) => {
 
 const setMonthlySalary = async (username, amount) => {
   const response = await axios.post(
-    `http://localhost:8080/users/user/${username}/salary`,
+    `${USERS_API_URL}/user/${username}/salary`,
     null,
     {
       params: { amount },
@@ -201,7 +204,7 @@ const setMonthlySalary = async (username, amount) => {
 };
 
 const applyMonthlySalary = async (username) => {
-  const response = await axios.post(`http://localhost:8080/users/user/${username}/salary/apply`);
+  const response = await axios.post(`${USERS_API_URL}/user/${username}/salary/apply`);
   return response.data;
 };
 
