@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import styled from 'styled-components';
 import toast from 'react-hot-toast';
 import BudgetService from '../service/BudgetService';
@@ -8,42 +8,121 @@ import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
 
 const Container = styled.div`
-  padding: 20px;
-  max-width: 1400px;
+  padding: 2.4rem;
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
+
+  @media (max-width: 800px) {
+    padding: 1.2rem;
+  }
 `;
 
 const PageTitle = styled.h1`
-  margin: 0 0 24px 0;
+  margin: 0;
   color: var(--color-grey-800);
-  font-size: 28px;
+  font-size: 3rem;
   font-weight: 700;
 `;
 
 const ControlsBar = styled.div`
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  gap: 16px;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+  gap: 1.6rem;
   flex-wrap: wrap;
 `;
 
-const StatsSection = styled.div`
+const ControlsLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const Subtitle = styled.p`
+  margin: 0;
+  color: var(--color-grey-600);
+  font-size: 1.4rem;
+`;
+
+const PageLayout = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-bottom: 24px;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const SummaryColumn = styled.aside`
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  position: sticky;
+  top: 1.6rem;
+
+  @media (max-width: 1024px) {
+    position: static;
+  }
+`;
+
+const CardsColumn = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+`;
+
+const CardsHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0.2rem;
+`;
+
+const CardsTitle = styled.h2`
+  margin: 0;
+  color: var(--color-grey-800);
+  font-size: 2rem;
+  font-weight: 700;
+`;
+
+const CardsMeta = styled.span`
+  color: var(--color-grey-600);
+  font-size: 1.3rem;
+  font-weight: 600;
+`;
+
+const MonthSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const MonthSectionTitle = styled.h3`
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--color-grey-700);
+  font-weight: 700;
+`;
+
+const StatsSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
 const StatCard = styled.div`
   background: var(--color-grey-0);
-  border: 2px solid var(--color-grey-200);
-  border-radius: 8px;
-  padding: 16px;
+  border: 1px solid var(--color-grey-200);
+  border-radius: 12px;
+  padding: 1.6rem;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0.6rem;
+  box-shadow: var(--shadow-sm);
 `;
 
 const StatLabel = styled.span`
@@ -55,18 +134,18 @@ const StatLabel = styled.span`
 `;
 
 const StatValue = styled.span`
-  font-size: 24px;
+  font-size: 3.2rem;
   font-weight: 700;
   color: var(--color-grey-800);
 `;
 
 const AddButton = styled.button`
-  padding: 10px 20px;
+  padding: 1rem 2rem;
   background: var(--color-brand-600);
   color: white;
   border: none;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 8px;
+  font-size: 1.4rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -87,9 +166,12 @@ const AddButton = styled.button`
 
 const BudgetsGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
-  margin-bottom: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1.4rem;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -175,12 +257,8 @@ function BudgetList() {
 
     setLoading(true);
     try {
-      let data;
-      if (filter === 'current') {
-        data = await BudgetService.getBudgetsForCurrentMonth(username);
-      } else {
-        data = await BudgetService.getAllBudgets(username);
-      }
+      // Always fetch all budgets, then apply consistent frontend filtering/grouping.
+      const data = await BudgetService.getAllBudgets(username);
       setBudgets(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error fetching budgets:', error);
@@ -224,63 +302,81 @@ function BudgetList() {
     }
   };
 
-  // Calculate summary stats
-  const totalBudget = budgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
-  const totalSpent = budgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
-  const alertCount = budgets.filter(b => b.alertTriggered || b.limitExceeded).length;
+  const normalizeBudgetDate = (budget) => {
+    const month = Number.parseInt(budget?.month, 10);
+    const year = Number.parseInt(budget?.year, 10);
+    return {
+      month: Number.isFinite(month) ? month : null,
+      year: Number.isFinite(year) ? year : null,
+    };
+  };
+
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const visibleBudgets = useMemo(() => {
+    if (filter !== 'current') return budgets;
+
+    return budgets.filter((budget) => {
+      const { month, year } = normalizeBudgetDate(budget);
+      return month === currentMonth && year === currentYear;
+    });
+  }, [budgets, filter, currentMonth, currentYear]);
+
+  const groupedBudgets = useMemo(() => {
+    const groups = new Map();
+
+    visibleBudgets.forEach((budget) => {
+      const { month, year } = normalizeBudgetDate(budget);
+      const safeMonth = month || 1;
+      const safeYear = year || currentYear;
+      const key = `${safeYear}-${String(safeMonth).padStart(2, '0')}`;
+
+      if (!groups.has(key)) {
+        const label = new Date(safeYear, safeMonth - 1, 1).toLocaleDateString('en-IN', {
+          month: 'long',
+          year: 'numeric',
+        });
+        groups.set(key, { key, label, budgets: [] });
+      }
+
+      groups.get(key).budgets.push(budget);
+    });
+
+    return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
+  }, [visibleBudgets, currentYear]);
+
+  // Calculate summary stats for currently visible budgets only.
+  const totalBudget = visibleBudgets.reduce((sum, b) => sum + (b.limitAmount || 0), 0);
+  const totalSpent = visibleBudgets.reduce((sum, b) => sum + (b.currentSpent || 0), 0);
+  const alertCount = visibleBudgets.filter(b => b.alertTriggered || b.limitExceeded).length;
 
   return (
     <Container>
-      <PageTitle>💰 Budget Management</PageTitle>
-
       <ControlsBar>
-        <FilterBar>
-          <FilterButton
-            active={filter === 'current'}
-            onClick={() => setFilter('current')}
-          >
-            This Month
-          </FilterButton>
-          <FilterButton
-            active={filter === 'all'}
-            onClick={() => setFilter('all')}
-          >
-            All Budgets
-          </FilterButton>
-        </FilterBar>
+        <ControlsLeft>
+          <PageTitle>💰 Budget Management</PageTitle>
+          <Subtitle>Track limits, spending, and alerts by category in one place.</Subtitle>
+          <FilterBar>
+            <FilterButton
+              active={filter === 'current'}
+              onClick={() => setFilter('current')}
+            >
+              This Month
+            </FilterButton>
+            <FilterButton
+              active={filter === 'all'}
+              onClick={() => setFilter('all')}
+            >
+              All Budgets
+            </FilterButton>
+          </FilterBar>
+        </ControlsLeft>
         <AddButton onClick={handleAddBudget} disabled={loading}>
           + Add Budget
         </AddButton>
       </ControlsBar>
-
-      {budgets.length > 0 && (
-        <StatsSection>
-          <StatCard>
-            <StatLabel>Total Budget</StatLabel>
-            <StatValue>{formatCurrency(totalBudget)}</StatValue>
-          </StatCard>
-          <StatCard>
-            <StatLabel>Total Spent</StatLabel>
-            <StatValue>{formatCurrency(totalSpent)}</StatValue>
-          </StatCard>
-          <StatCard>
-            <StatLabel>Remaining</StatLabel>
-            <StatValue style={{
-              color: totalBudget - totalSpent < 0 ? 'var(--color-red-600)' : 'var(--color-green-600)'
-            }}>
-              {formatCurrency(Math.max(totalBudget - totalSpent, 0))}
-            </StatValue>
-          </StatCard>
-          {alertCount > 0 && (
-            <StatCard style={{ borderColor: 'var(--color-yellow-600)' }}>
-              <StatLabel>⚠️ Alerts</StatLabel>
-              <StatValue style={{ color: 'var(--color-yellow-600)' }}>
-                {alertCount}
-              </StatValue>
-            </StatCard>
-          )}
-        </StatsSection>
-      )}
 
       <BudgetForm
         isOpen={formOpen}
@@ -291,26 +387,82 @@ function BudgetList() {
 
       {loading ? (
         <LoadingSpinner>Loading budgets...</LoadingSpinner>
-      ) : budgets.length === 0 ? (
+      ) : visibleBudgets.length === 0 ? (
         <EmptyState>
           <EmptyIcon>📋</EmptyIcon>
           <EmptyTitle>No Budgets Yet</EmptyTitle>
           <EmptyText>
-            Create your first budget to track spending by category
+            {filter === 'current'
+              ? 'No budgets found for the current month. Switch to All Budgets to view other months.'
+              : 'Create your first budget to track spending by category.'}
           </EmptyText>
           <AddButton onClick={handleAddBudget}>Create First Budget</AddButton>
         </EmptyState>
       ) : (
-        <BudgetsGrid>
-          {budgets.map(budget => (
-            <BudgetCard
-              key={budget.budget_id}
-              budget={budget}
-              onEdit={handleEditBudget}
-              onDelete={handleDeleteBudget}
-            />
-          ))}
-        </BudgetsGrid>
+        <PageLayout>
+          <SummaryColumn>
+            <StatsSection>
+              <StatCard>
+                <StatLabel>Total Budget</StatLabel>
+                <StatValue>{formatCurrency(totalBudget)}</StatValue>
+              </StatCard>
+              <StatCard>
+                <StatLabel>Total Spent</StatLabel>
+                <StatValue>{formatCurrency(totalSpent)}</StatValue>
+              </StatCard>
+              <StatCard>
+                <StatLabel>Remaining</StatLabel>
+                <StatValue style={{
+                  color: totalBudget - totalSpent < 0 ? 'var(--color-red-600)' : 'var(--color-green-600)'
+                }}>
+                  {formatCurrency(Math.max(totalBudget - totalSpent, 0))}
+                </StatValue>
+              </StatCard>
+              <StatCard style={{ borderColor: alertCount > 0 ? 'var(--color-yellow-600)' : 'var(--color-grey-200)' }}>
+                <StatLabel>⚠️ Alerts</StatLabel>
+                <StatValue style={{ color: alertCount > 0 ? 'var(--color-yellow-600)' : 'var(--color-grey-700)' }}>
+                  {alertCount}
+                </StatValue>
+              </StatCard>
+            </StatsSection>
+          </SummaryColumn>
+
+          <CardsColumn>
+            <CardsHeader>
+              <CardsTitle>{filter === 'current' ? 'Current Month Budgets' : 'Budget Categories by Month'}</CardsTitle>
+              <CardsMeta>{visibleBudgets.length} budgets</CardsMeta>
+            </CardsHeader>
+
+            {filter === 'current' ? (
+              <BudgetsGrid>
+                {visibleBudgets.map(budget => (
+                  <BudgetCard
+                    key={budget.budget_id}
+                    budget={budget}
+                    onEdit={handleEditBudget}
+                    onDelete={handleDeleteBudget}
+                  />
+                ))}
+              </BudgetsGrid>
+            ) : (
+              groupedBudgets.map((group) => (
+                <MonthSection key={group.key}>
+                  <MonthSectionTitle>{group.label}</MonthSectionTitle>
+                  <BudgetsGrid>
+                    {group.budgets.map((budget) => (
+                      <BudgetCard
+                        key={budget.budget_id}
+                        budget={budget}
+                        onEdit={handleEditBudget}
+                        onDelete={handleDeleteBudget}
+                      />
+                    ))}
+                  </BudgetsGrid>
+                </MonthSection>
+              ))
+            )}
+          </CardsColumn>
+        </PageLayout>
       )}
     </Container>
   );
