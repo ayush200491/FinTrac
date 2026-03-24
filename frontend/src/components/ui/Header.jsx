@@ -3,8 +3,7 @@ import styled from "styled-components";
 import HeaderMenu from "./HeaderMenu";
 
 const StyledHeader = styled.header`
-  background-color: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, var(--color-grey-0), var(--color-grey-50));
   padding: 1.6rem 2.8rem;
   border-bottom: 1px solid var(--color-grey-200);
 

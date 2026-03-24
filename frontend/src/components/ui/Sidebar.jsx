@@ -5,8 +5,7 @@ import MainNav from "./MainNav"
 // import { useCabins } from '../features/cabins/useCabins'
 
 const StyledSidebar = styled.aside`
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.52));
-        backdrop-filter: blur(14px);
+    background: linear-gradient(180deg, var(--color-grey-0), var(--color-grey-50));
         padding: 2.1rem 1.8rem;
         border-right: 1px solid var(--color-grey-200);
     grid-row: 1/-1;
@@ -20,7 +19,7 @@ const StyledSidebar = styled.aside`
             border-right: none;
             border-bottom: 1px solid var(--color-grey-200);
             padding: 1.2rem 1.4rem;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.8));
+            background: linear-gradient(180deg, var(--color-grey-0), var(--color-grey-50));
         }
 `
 

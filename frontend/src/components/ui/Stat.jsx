@@ -1,7 +1,7 @@
 import styled from "styled-components";
 import React from "react";
 const StyledStat = styled.div`
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.72));
+  background: linear-gradient(160deg, var(--color-grey-0), var(--color-grey-50));
   border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-sm);
@@ -37,14 +37,14 @@ const Title = styled.h5`
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-weight: 700;
-  color: var(--color-grey-500);
+  color: var(--color-grey-600);
 `;
 
 const Value = styled.p`
   font-size: 2rem;
   line-height: 1;
   font-weight: 700;
-  color: var(--color-grey-800);
+  color: var(--color-grey-900);
 `;
 
 function Stat({ icon, title, value, color }) {

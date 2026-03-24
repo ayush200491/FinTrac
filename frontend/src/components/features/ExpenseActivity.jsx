@@ -36,7 +36,7 @@ const NoActivity = styled.p`
 `;
 
 const StyledListItem = styled.li`
-  background-color: var(--color-white);
+  background-color: var(--color-grey-50);
   border: 1px solid var(--color-grey-200);
   border-radius: var(--border-radius-sm);
   padding: 1.6rem;
