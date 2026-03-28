@@ -15,6 +15,7 @@ import { useUser } from '../hooks/useUser';
 import { formatCurrency } from '../utils/helpers';
 import Modal from '../ui/Modal';
 import { Button, ErrorMessage, Input, Label } from '../ui';
+import UserService from '../service/UserService';
 import {
   ALL_MONTHS,
   ALL_YEARS,
@@ -237,6 +238,21 @@ const EditForm = styled.form`
   gap: 1rem;
 `;
 
+const IncomeTypeSelect = styled.select`
+  width: 100%;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--color-grey-300);
+  border-radius: var(--border-radius-md);
+  background: var(--color-grey-0);
+  color: var(--color-grey-700);
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 4px rgba(17, 127, 115, 0.14);
+  }
+`;
+
 const EditTitle = styled.h3`
   margin: 0 0 0.6rem;
   color: var(--color-grey-800);
@@ -298,6 +314,7 @@ function Transactions() {
     amount: '',
     category: 'OTHER',
     date: '',
+    incomeKind: 'money-added',
   });
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -383,12 +400,19 @@ function Transactions() {
   }, [username]);
 
   const openEditModal = (transaction) => {
+    const isIncome = transaction?.type === 'income';
+    const normalizedIncomeKind =
+      isIncome && /salary/i.test(String(transaction?.title || transaction?.description || ''))
+        ? 'salary'
+        : 'money-added';
+
     setEditingTransaction(transaction);
     setEditFormData({
       title: transaction.title || '',
       amount: String(transaction.amount ?? ''),
       category: transaction.category || 'OTHER',
       date: transaction.date ? new Date(transaction.date).toISOString().split('T')[0] : '',
+      incomeKind: normalizedIncomeKind,
     });
     setSaveError('');
   };
@@ -423,12 +447,17 @@ function Transactions() {
     setSaveLoading(true);
     setSaveError('');
     try {
+      const isIncome = editingTransaction.type === 'income';
+      const incomeLabel =
+        editFormData.incomeKind === 'salary' ? 'Monthly Salary' : 'Money Added';
       const updatedTransaction = await TransactionService.updateTransaction({
         ...editingTransaction,
-        title: editFormData.title.trim(),
+        title: isIncome ? incomeLabel : editFormData.title.trim(),
         amount: amountValue,
-        category: editFormData.category,
+        category: isIncome ? 'OTHER' : editFormData.category,
         date: editFormData.date,
+        description: isIncome ? incomeLabel : editFormData.title.trim(),
+        expenseType: isIncome ? 'income' : 'daily',
       });
 
       setTransactions((prev) =>
@@ -439,6 +468,31 @@ function Transactions() {
       closeEditModal();
     } catch (error) {
       setSaveError(error?.message || 'Failed to update transaction');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleDeleteTransaction = async () => {
+    if (!editingTransaction) return;
+    if (!window.confirm('Delete this transaction?')) return;
+
+    setSaveLoading(true);
+    setSaveError('');
+
+    try {
+      const amountValue = Number(editingTransaction.amount || 0);
+      if (username && Number.isFinite(amountValue) && amountValue > 0) {
+        const balanceDelta = editingTransaction.type === 'income' ? -amountValue : amountValue;
+        await UserService.addBalance(username, balanceDelta, false);
+      }
+
+      await TransactionService.deleteTransaction(editingTransaction.id);
+      setTransactions((prev) => prev.filter((transaction) => transaction.id !== editingTransaction.id));
+      closeEditModal();
+      window.dispatchEvent(new Event('expensewise:user-refresh'));
+    } catch (error) {
+      setSaveError(error?.message || 'Failed to delete transaction');
     } finally {
       setSaveLoading(false);
     }
@@ -561,15 +615,29 @@ function Transactions() {
       <Modal isOpen={Boolean(editingTransaction)} onClose={closeEditModal}>
         <EditTitle>Edit Transaction</EditTitle>
         <EditForm onSubmit={handleSaveEdit}>
-          <div>
-            <Label htmlFor="transaction-title">Title</Label>
-            <Input
-              id="transaction-title"
-              value={editFormData.title}
-              onChange={(event) => handleEditChange('title', event.target.value)}
-              required
-            />
-          </div>
+          {editingTransaction?.type !== 'income' ? (
+            <div>
+              <Label htmlFor="transaction-title">Title</Label>
+              <Input
+                id="transaction-title"
+                value={editFormData.title}
+                onChange={(event) => handleEditChange('title', event.target.value)}
+                required
+              />
+            </div>
+          ) : (
+            <div>
+              <Label htmlFor="transaction-income-kind">Income Type</Label>
+              <IncomeTypeSelect
+                id="transaction-income-kind"
+                value={editFormData.incomeKind}
+                onChange={(event) => handleEditChange('incomeKind', event.target.value)}
+              >
+                <option value="salary">Salary</option>
+                <option value="money-added">Money Added</option>
+              </IncomeTypeSelect>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="transaction-amount">Amount</Label>
@@ -584,20 +652,22 @@ function Transactions() {
             />
           </div>
 
-          <div>
-            <Label htmlFor="transaction-category">Category</Label>
-            <EditSelect
-              id="transaction-category"
-              value={editFormData.category}
-              onChange={(event) => handleEditChange('category', event.target.value)}
-            >
-              {EXPENSE_CATEGORIES.map((category) => (
-                <option key={category.name} value={category.name}>
-                  {category.icon} {category.displayName}
-                </option>
-              ))}
-            </EditSelect>
-          </div>
+          {editingTransaction?.type !== 'income' && (
+            <div>
+              <Label htmlFor="transaction-category">Category</Label>
+              <EditSelect
+                id="transaction-category"
+                value={editFormData.category}
+                onChange={(event) => handleEditChange('category', event.target.value)}
+              >
+                {EXPENSE_CATEGORIES.map((category) => (
+                  <option key={category.name} value={category.name}>
+                    {category.icon} {category.displayName}
+                  </option>
+                ))}
+              </EditSelect>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="transaction-date">Date</Label>
@@ -613,6 +683,9 @@ function Transactions() {
           {saveError && <ErrorMessage>{saveError}</ErrorMessage>}
 
           <EditActions>
+            <Button type="button" variation="danger" onClick={handleDeleteTransaction} disabled={saveLoading}>
+              Delete
+            </Button>
             <Button type="button" variation="secondary" onClick={closeEditModal} disabled={saveLoading}>
               Cancel
             </Button>

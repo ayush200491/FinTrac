@@ -238,35 +238,25 @@ public class AuthController {
 //
 //        return ResponseEntity.ok(Map.of("message", "User registered successfully!"));
 //    }
-@PostMapping(path = "/register", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+@PostMapping(path = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
 public ResponseEntity<?> registerUser(
-        @Valid @RequestPart("user") User user,
-    @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
-        BindingResult bindingResult) throws IOException {
+        @Valid @RequestBody User user,
+        BindingResult bindingResult) {
 
     log.info("Received user data: {}", user);
-    if (profileImage != null) {
-        log.info("Received profile image: {}", profileImage.getOriginalFilename());
-    }
 
     // Check for validation errors
     if (bindingResult.hasErrors()) {
-        List<String> validationErrors = bindingResult.getAllErrors().stream()
-                .map(ObjectError::getDefaultMessage)
-                .toList();
+            List<Map<String, String>> validationErrors = bindingResult.getFieldErrors().stream()
+                    .map(error -> Map.of(
+                            "field", error.getField(),
+                            "defaultMessage", String.valueOf(error.getDefaultMessage())
+                    ))
+                    .toList();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", "Validation failed", "errors", validationErrors));
     }
 
-    if (profileImage != null && !profileImage.isEmpty()) {
-        try {
-            String fileName = fileUploadUtil.uploadFileAndSaveToDatabase(profileImage);
-            user.setProfileImageFileName(fileName);
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("message", "Failed to upload profile image"));
-        }
-    }
 
     // Check if the username already exists & provide suggestions
     if (userRepository.existsByUsername(user.getUsername())) {
@@ -274,6 +264,11 @@ public ResponseEntity<?> registerUser(
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("message", "Username already exists", "suggestedUsernames", suggestedUsernames));
     }
+
+        if (userRepository.existsByEmail(user.getEmail())) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(Map.of("message", "Email already exists"));
+        }
 
     // Creating user's account
     user.setPassword(passwordEncoder.encode(user.getPassword()));

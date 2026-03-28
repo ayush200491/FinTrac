@@ -3,6 +3,7 @@ import ExpenseService from '../service/ExpenseService';
 import { calculateExpensesByCategory, generateLineChartData } from '../features/ChartData';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from './useUser';
+import { isIncomeTransaction } from '../transactions/transactionModel';
 
 const useExpenseSummary = () => {
   const [expenses, setExpenses] = useState([]);
@@ -21,7 +22,9 @@ const useExpenseSummary = () => {
 
     try {
       const fetchedExpenses = await ExpenseService.getAllExpenses(username);
-      setExpenses(fetchedExpenses);
+      setExpenses((Array.isArray(fetchedExpenses) ? fetchedExpenses : []).filter(
+        (expense) => !isIncomeTransaction(expense),
+      ));
     } catch (error) {
       console.error('Error fetching expenses:', error.message);
     }

@@ -24,7 +24,12 @@ const groupTransactionsByMonthYear = (transactions = []) => {
     groups.get(key).transactions.push(transaction);
   });
 
-  return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
+  return Array.from(groups.values())
+    .map((group) => ({
+      ...group,
+      transactions: group.transactions.sort((a, b) => new Date(b.date) - new Date(a.date)),
+    }))
+    .sort((a, b) => b.key.localeCompare(a.key));
 };
 
 export { groupTransactionsByMonthYear };

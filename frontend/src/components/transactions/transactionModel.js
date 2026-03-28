@@ -1,5 +1,8 @@
 const DEFAULT_CATEGORY = 'OTHER';
 
+export const isIncomeTransaction = (input = {}) =>
+  input.type === 'income' || String(input.expenseType || '').toLowerCase() === 'income';
+
 const normalizeDate = (value) => {
   if (!value) return new Date().toISOString().split('T')[0];
   const parsed = new Date(value);
@@ -11,7 +14,7 @@ const normalizeDate = (value) => {
 
 export const createTransaction = (input = {}) => {
   const amount = Number(input.amount ?? 0);
-  const normalizedType = input.type === 'income' ? 'income' : 'expense';
+  const normalizedType = isIncomeTransaction(input) ? 'income' : 'expense';
 
   return {
     id: input.id ?? input.expense_id ?? null,

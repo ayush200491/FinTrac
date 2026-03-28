@@ -1,8 +1,11 @@
 import { format } from 'date-fns';
 import { getCategoryByName } from '../expenses/constants/expenseCategories';
+import { isIncomeTransaction } from '../transactions/transactionModel';
 
 export const calculateExpensesByCategory = (expenses = []) => {
   const categoryTotals = expenses.reduce((accumulator, expense) => {
+    if (isIncomeTransaction(expense)) return accumulator;
+
     const categoryName = expense.category || 'OTHER';
     const category = getCategoryByName(categoryName);
     const displayName = category?.displayName || categoryName;
@@ -20,6 +23,8 @@ export const calculateExpensesByCategory = (expenses = []) => {
 
 export const generateLineChartData = (expenses = []) => {
   const groupedByDate = expenses.reduce((accumulator, expense) => {
+    if (isIncomeTransaction(expense)) return accumulator;
+
     const rawDate = expense.date ? new Date(expense.date) : null;
     if (!rawDate || Number.isNaN(rawDate.getTime())) {
       return accumulator;
@@ -41,6 +46,8 @@ export const generateLineChartData = (expenses = []) => {
 // New: Get category-wise distribution with counts
 export const getCategoryDistribution = (expenses = []) => {
   const distribution = expenses.reduce((accumulator, expense) => {
+    if (isIncomeTransaction(expense)) return accumulator;
+
     const categoryName = expense.category || 'OTHER';
     const category = getCategoryByName(categoryName);
     
@@ -71,10 +78,11 @@ export const getExpensesByCategory = (expenses = [], category) => {
 // New: Get category summary statistics
 export const getCategorySummary = (expenses = []) => {
   const distribution = getCategoryDistribution(expenses);
+  const expenseOnlyCount = expenses.filter((expense) => !isIncomeTransaction(expense)).length;
   
   return {
     totalCategories: distribution.length,
-    totalExpenses: expenses.length,
+    totalExpenses: expenseOnlyCount,
     averagePerCategory: expenses.length / (distribution.length || 1),
     categories: distribution.sort((a, b) => b.total - a.total),
   };

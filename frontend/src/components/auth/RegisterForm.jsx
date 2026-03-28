@@ -3,8 +3,8 @@ import styled from 'styled-components';
 import axios from 'axios';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { useCsrfToken } from '../hooks/useCsrfToken';
 import { Button, FormContainer, ErrorMessage, Form, Input, Heading } from '../ui';
+import { buildApiUrl } from '../service/apiConfig';
 
 const FullPageContainer = styled.div`
   min-height: 100vh;
@@ -44,22 +44,14 @@ const RegisterForm = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [suggestedUsernames, setSuggestedUsernames] = useState([]);
   const navigate = useNavigate();
-  const csrfToken = useCsrfToken();
+  const registerApiUrl = buildApiUrl('/register');
 
   const submitForm = async (data) => {
     try {
-      const formData = new FormData();
-      formData.append('user', new Blob([JSON.stringify({
+      const response = await axios.post(registerApiUrl, {
         username: data.username,
         email: data.email,
         password: data.password
-      })], { type: 'application/json' }));
-
-      const response = await axios.post('http://localhost:8080/register', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'X-CSRF-TOKEN': csrfToken   // Include CSRF token in headers
-        },
       });
 
       console.log(response);
@@ -72,17 +64,20 @@ const RegisterForm = () => {
           setSuggestedUsernames(suggestions);
         } else if (error.response.status === 400) {
           const { errors: validationErrors } = error.response.data;
-          validationErrors.forEach(err => {
-            setError(err.field, { type: 'manual', message: err.defaultMessage });
-          });
+          if (Array.isArray(validationErrors)) {
+            validationErrors.forEach((err) => {
+              if (err?.field && err?.defaultMessage) {
+                setError(err.field, { type: 'manual', message: err.defaultMessage });
+              }
+            });
+          }
+          setErrorMessage(error.response.data?.message || 'Validation failed');
 
         } else {
           if (error.response.data && error.response.data.message) {
-            alert(error.response.data.message);
             setErrorMessage(error.response.data.message);
           }
-          setErrorMessage(error.response.data);
-          // setErrorMessage('An error occurred while registering.');
+          setErrorMessage(error.response.data?.message || 'An error occurred while registering.');
         }
       } else {
         setErrorMessage('An unexpected error occurred while registering.');

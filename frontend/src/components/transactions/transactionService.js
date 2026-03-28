@@ -22,6 +22,10 @@ class TransactionService {
     const updatedExpense = await ExpenseService.updateExpense(transaction.id, transaction);
     return mapExpenseToTransaction(updatedExpense);
   }
+
+  static async deleteTransaction(transactionId) {
+    return ExpenseService.deleteExpense(transactionId);
+  }
 }
 
 export default TransactionService;

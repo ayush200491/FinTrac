@@ -179,12 +179,12 @@ const deleteUser = async (userId) => {
   }
 };
 
-const addBalance = async (username, amount) => {
+const addBalance = async (username, amount, recordTransaction = true) => {
   const response = await axios.post(
     `${USERS_API_URL}/user/${username}/balance/add`,
     null,
     {
-      params: { amount },
+      params: { amount, recordTransaction },
     }
   );
 

@@ -9,6 +9,7 @@ import ExpenseService from '../service/ExpenseService';
 import { EXPENSE_CATEGORIES } from './constants/expenseCategories';
 import { useAuth } from '../context/AuthContext';
 import { useUser } from '../hooks/useUser';
+import { isIncomeTransaction } from '../transactions/transactionModel';
 
 const Container = styled.div`
   display: flex;
@@ -68,7 +69,9 @@ const ExpenseList = () => {
 
         try {
             const fetchedExpenses = await ExpenseService.getAllExpenses(username);
-            setExpenseList(fetchedExpenses);
+            setExpenseList((Array.isArray(fetchedExpenses) ? fetchedExpenses : []).filter(
+                (expense) => !isIncomeTransaction(expense),
+            ));
         } catch (error) {
             console.error('Error fetching expenses:', error.message);
         }

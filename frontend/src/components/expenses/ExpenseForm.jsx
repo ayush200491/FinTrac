@@ -110,7 +110,7 @@ const ExpenseForm = ({ isOpen, onClose, onSubmit }) => {
       const createdExpense = await ExpenseService.addExpense(payload);
 
       if (loggedInUser) {
-        await UserService.addBalance(loggedInUser, -totalDebit);
+        await UserService.addBalance(loggedInUser, -totalDebit, false);
       }
 
       onSubmit(createdExpense);

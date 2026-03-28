@@ -41,22 +41,13 @@ const UserProfile = () => {
 
     try {
       await UserService.setMonthlySalary(user.username, amount);
-      setStatusMessage('Monthly salary saved successfully');
+      await UserService.applyMonthlySalary(user.username);
+      setStatusMessage('Monthly salary saved and recorded successfully');
       reloadUser();
       window.dispatchEvent(new Event('expensewise:user-refresh'));
+      setSalaryAmount('');
     } catch (error) {
       setStatusMessage(error?.response?.data?.message || 'Failed to save monthly salary');
-    }
-  };
-
-  const handleApplyMonthlySalary = async () => {
-    try {
-      await UserService.applyMonthlySalary(user.username);
-      setStatusMessage('Monthly salary added to current balance');
-      reloadUser();
-      window.dispatchEvent(new Event('expensewise:user-refresh'));
-    } catch (error) {
-      setStatusMessage(error?.response?.data?.message || 'Failed to add monthly salary');
     }
   };
 
@@ -111,7 +102,6 @@ const UserProfile = () => {
               onChange={(e) => setSalaryAmount(e.target.value)}
             />
             <Button type="button" onClick={handleSetMonthlySalary}>Save Salary</Button>
-            <Button type="button" variation="secondary" onClick={handleApplyMonthlySalary}>Add This Month Salary</Button>
           </MoneyControls>
           {statusMessage && <ErrorMessage>{statusMessage}</ErrorMessage>}
           {/* <InfoItem>

@@ -1,8 +1,11 @@
 package com.example.backend.controller;
 
+import com.example.backend.model.Expense;
+import com.example.backend.model.ExpenseCategory;
 import com.example.backend.model.User;
 import com.example.backend.repository.FileRepository;
 import com.example.backend.repository.UserRepository;
+import com.example.backend.service.ExpenseService;
 import com.example.backend.util.FileUploadUtil;
 import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
@@ -21,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +46,9 @@ public class UserController {
 
     @Autowired
     private FileUploadUtil fileUploadUtil;
+
+    @Autowired
+    private ExpenseService expenseService;
 
     @Autowired
     private HttpSession httpSession;
@@ -73,8 +80,11 @@ public class UserController {
         return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(imageContent);
     }
 
-    @PostMapping("/user/{username}/balance/add")
-    public ResponseEntity<?> addBalance(@PathVariable String username, @RequestParam BigDecimal amount) {
+        @PostMapping("/user/{username}/balance/add")
+        public ResponseEntity<?> addBalance(
+            @PathVariable String username,
+            @RequestParam BigDecimal amount,
+            @RequestParam(required = false, defaultValue = "true") boolean recordTransaction) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) == 0) {
             return ResponseEntity.badRequest().body(Map.of("message", "Amount must not be 0"));
         }
@@ -91,6 +101,17 @@ public class UserController {
 
         user.setBalance(updatedBalance);
         User updatedUser = userRepository.save(user);
+
+        if (recordTransaction) {
+            Expense incomeExpense = new Expense();
+            incomeExpense.setUsername(username);
+            incomeExpense.setAmount(amount);
+            incomeExpense.setCategory(ExpenseCategory.OTHER);
+            incomeExpense.setDescription("Money Added");
+            incomeExpense.setDate(LocalDate.now());
+            incomeExpense.setExpenseType("income");
+            expenseService.createExpense(incomeExpense);
+        }
 
         return ResponseEntity.ok(Map.of(
                 "message", "Balance updated successfully",
@@ -130,6 +151,15 @@ public class UserController {
         BigDecimal currentBalance = user.getBalance() == null ? BigDecimal.ZERO : user.getBalance();
         user.setBalance(currentBalance.add(monthlySalary));
         User updatedUser = userRepository.save(user);
+
+        Expense incomeExpense = new Expense();
+        incomeExpense.setUsername(username);
+        incomeExpense.setAmount(monthlySalary);
+        incomeExpense.setCategory(ExpenseCategory.OTHER);
+        incomeExpense.setDescription("Monthly Salary");
+        incomeExpense.setDate(LocalDate.now());
+        incomeExpense.setExpenseType("income");
+        expenseService.createExpense(incomeExpense);
 
         return ResponseEntity.ok(Map.of(
                 "message", "Monthly salary added to balance",

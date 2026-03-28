@@ -236,7 +236,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
       const oldAmount = Number(selectedExpense.amount || 0);
       const delta = parsedAmount - oldAmount;
       if (username && delta !== 0) {
-        await UserService.addBalance(username, -delta);
+        await UserService.addBalance(username, -delta, false);
         window.dispatchEvent(new Event('expensewise:user-refresh'));
       }
 
@@ -260,7 +260,7 @@ function ExpenseActivity({ expenses, onExpensesChanged }) {
 
       const oldAmount = Number(selectedExpense.amount || 0);
       if (username && oldAmount > 0) {
-        await UserService.addBalance(username, oldAmount);
+        await UserService.addBalance(username, oldAmount, false);
         window.dispatchEvent(new Event('expensewise:user-refresh'));
       }
 
