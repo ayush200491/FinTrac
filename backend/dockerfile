@@ -1,0 +1,18 @@
+FROM maven:3.9.9-eclipse-temurin-17 AS build
+WORKDIR /app
+
+# Copy build files first to maximize layer caching for dependencies.
+COPY pom.xml ./
+RUN mvn -q -DskipTests dependency:go-offline
+
+# Copy sources and build the executable jar.
+COPY src ./src
+RUN mvn -q -DskipTests package
+
+FROM eclipse-temurin:17-jre
+WORKDIR /ExpenseWise
+
+COPY --from=build /app/target/backend-0.0.1-SNAPSHOT.jar /ExpenseWise/backend.jar
+
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "backend.jar"]

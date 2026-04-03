@@ -1,0 +1,21 @@
+# Ignore Maven wrapper files
+.mvn/
+mvnw
+mvnw.cmd
+
+# Ignore IntelliJ IDEA project files
+*.iml
+.idea/
+
+# Ignore build outputs
+# target/
+
+# Ignore temporary files and logs
+*.log
+*.tmp
+
+# Ignore node_modules if you have any frontend assets in the backend
+node_modules/
+
+# Ignore sensitive files
+.env
