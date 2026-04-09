@@ -63,6 +63,12 @@ From the project root:
 docker compose up --build
 ```
 
+From any directory, you can run with an explicit compose file path:
+
+```bash
+docker compose -f /Users/ayushpatidar/Desktop/ETT/ExpenseWise/docker-compose.yml up --build
+```
+
 If your environment uses the legacy command, use:
 
 ```bash
